@@ -1,10 +1,18 @@
-﻿namespace Compiler
+﻿using Compiler.Lexer;
+
+namespace Compiler
 {
     internal class Program
     {
         static void Main()
         {
-            Console.WriteLine("Hello World!");
+            RegexLexer lexer = new();
+            var a = lexer.TokenizeFile(@"..\..\..\SampleCode.txt");
+
+            foreach (var token in a)
+            {
+                Console.WriteLine(token);
+            }
         }
     }
 }
