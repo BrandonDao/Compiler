@@ -7,76 +7,89 @@ namespace Compiler.Lexer
     {
         private static readonly TokenDefinition[] tokenDefinitions =
         [
-            new TokenDefinition(0, TokenType.Int8, @"\b(Int8)\b"),
-            new TokenDefinition(0, TokenType.Int16, @"\b(Int16)\b"),
-            new TokenDefinition(0, TokenType.Int32, @"\b(Int32)\b"),
-            new TokenDefinition(0, TokenType.Int64, @"\b(Int64)\b"),
-            new TokenDefinition(0, TokenType.Boolean, @"\b(Boolean)\b"),
-            new TokenDefinition(0, TokenType.Void, @"\b(void)\b"),
-            new TokenDefinition(5, TokenType.EqualityOperator, @"(==)"),
-            new TokenDefinition(5, TokenType.DotOperator, @"(\.)"),
-            new TokenDefinition(5, TokenType.MinusSign, @"(-)"),
-            new TokenDefinition(5, TokenType.PlusSign, @"(\+)"),
-            new TokenDefinition(5, TokenType.MultiplySign, @"(\*)"),
-            new TokenDefinition(5, TokenType.DivideSign, @"(/)"),
-            new TokenDefinition(7, TokenType.AssignmentOperator, @"(=)"),
-            new TokenDefinition(10, TokenType.Using, @"(using)"),
-            new TokenDefinition(10, TokenType.While, @"(while)"),
-            new TokenDefinition(10, TokenType.Func, @"\b(func)\b"),
-            new TokenDefinition(10, TokenType.Return, @"(return)"),
-            new TokenDefinition(10, TokenType.Whitespace, @"([ \t\r\n]+)"),
-            new TokenDefinition(15, TokenType.IntegerLiteral, @"\b(\d+)\b"),
-            new TokenDefinition(15, TokenType.BooleanLiteral, @"\b(true|false)\b"),
-            new TokenDefinition(30, TokenType.Semicolon, @"(;)"),
-            new TokenDefinition(30, TokenType.Comma, @"(,)"),
-            new TokenDefinition(30, TokenType.LeftBrace, @"(\{)"),
-            new TokenDefinition(30, TokenType.RightBrace, @"(\})"),
-            new TokenDefinition(30, TokenType.LeftParenthesis, @"(\()"),
-            new TokenDefinition(30, TokenType.RightParenthesis, @"(\))"),
-            new TokenDefinition(30, TokenType.LeftSquareBracket, @"(\[)"),
-            new TokenDefinition(30, TokenType.RightSquareBracket, @"(\])"),
-            new TokenDefinition(30, TokenType.LeftAngleBracket, @"(<)"),
-            new TokenDefinition(30, TokenType.RightAngleBracket, @"(>)"),
-            new TokenDefinition(40, TokenType.Identifier, @"\b([a-zA-Z_][a-zA-Z0-9_]*)\b"),
+            new(0, TokenType.Int8, @"\b(Int8)\b"),
+            new(0, TokenType.Int16, @"\b(Int16)\b"),
+            new(0, TokenType.Int32, @"\b(Int32)\b"),
+            new(0, TokenType.Int64, @"\b(Int64)\b"),
+            new(0, TokenType.Boolean, @"\b(Boolean)\b"),
+            new(0, TokenType.Void, @"\b(void)\b"),
+
+            new(5, TokenType.EqualityOperator, @"(==)"),
+            new(5, TokenType.DotOperator, @"(\.)"),
+            new(5, TokenType.ModulusOperator, @"(%)"),
+            new(5, TokenType.MinusSign, @"(-)"),
+            new(5, TokenType.PlusSign, @"(\+)"),
+            new(5, TokenType.MultiplySign, @"(\*)"),
+            new(5, TokenType.DivideSign, @"(/)"),
+
+            new(7, TokenType.AssignmentOperator, @"(=)"),
+
+            new(10, TokenType.Using, @"\b(using)\b"),
+            new(10, TokenType.While, @"\b(while)\b"),
+            new(10, TokenType.Func, @"\b(func)\b"),
+            new(10, TokenType.Return, @"\b(return)\b"),
+            new(10, TokenType.IfStatement, @"\b(if)\b"),
+            new(10, TokenType.ElseStatement, @"\b(else)\b"),
+            new(10, TokenType.Whitespace, @"([ \t\r\n]+)"),
+            new(15, TokenType.IntegerLiteral, @"\b(\d+)\b"),
+            new(15, TokenType.BooleanLiteral, @"\b(true|false)\b"),
+
+            new(30, TokenType.Semicolon, @"(;)"),
+            new(30, TokenType.Comma, @"(,)"),
+            new(30, TokenType.OpenBrace, @"(\{)"),
+            new(30, TokenType.CloseBrace, @"(\})"),
+            new(30, TokenType.OpenParenthesis, @"(\()"),
+            new(30, TokenType.CloseParenthesis, @"(\))"),
+            new(30, TokenType.OpenSquareBracket, @"(\[)"),
+            new(30, TokenType.CloseSquareBracket, @"(\])"),
+            new(30, TokenType.OpenAngleBracket, @"(<)"),
+            new(30, TokenType.CloseAngleBracket, @"(>)"),
+
+            new(40, TokenType.Identifier, @"\b([a-zA-Z_][a-zA-Z0-9_]*)\b"),
         ];
 
         public List<Token> TokenizeFile(string filePath)
         {
-            string text = File.ReadAllText(filePath);
-            return Tokenize(text);
+            string[] lines = File.ReadAllLines(filePath);
+            return Tokenize(lines);
         }
 
-        public List<Token> Tokenize(string text)
+        public List<Token> Tokenize(string[] lines)
         {
             var orderedDefinitions = tokenDefinitions.OrderBy(d => d.Priority);
             if (!orderedDefinitions.Any()) throw new InvalidOperationException("No token definitions available!");
 
-            var missing = Enum.GetValues<TokenType>().Except(tokenDefinitions.Select(def => def.Type));
+            var missing = Enum.GetValues<TokenType>().Except(tokenDefinitions.Select(def => def.Type)).Where(type => !Enum.GetName(type)!.Contains("Flag"));
             if (missing.Any()) throw new InvalidOperationException($"Some token types are missing definitions: {string.Join(", ", missing)}");
 
             List<Token> tokens = [];
-            uint position = 0;
 
-            while (position < text.Length)
-            {
-                TokenDefinition? matchedDef = null;
-                Match match = Match.Empty;
+            for(uint lineIdx = 0; lineIdx < lines.Length; lineIdx++)
+            {     
+                uint charIdx = 0;
 
-                foreach (var def in orderedDefinitions)
+                while (charIdx < lines[lineIdx].Length)
                 {
-                    match = def.Regex.Match(text, (int)position);
+                    TokenDefinition? matchedDef = null;
+                    Match match = Match.Empty;
 
-                    if (!match.Success || match.Index != position) continue;
+                    foreach (var def in orderedDefinitions)
+                    {
+                        match = def.Regex.Match(lines[lineIdx], (int)charIdx);
 
-                    matchedDef = def;
-                    break;
+                        if (!match.Success || match.Index != charIdx) continue;
+
+                        matchedDef = def;
+                        break;
+                    }
+
+                    if (matchedDef == null || !match.Success) throw new InvalidOperationException($"Unexpected character in line {lineIdx} at position {charIdx}: '{lines[(int)charIdx]}'!");
+
+                    tokens.Add(new Token(matchedDef.Type, match, lineIdx, charIdx));
+                    charIdx += (uint)match.Length;
                 }
-
-                if (matchedDef == null || !match.Success) throw new InvalidOperationException($"Unexpected character at position {position}: '{text[(int)position]}'!");
-
-                tokens.Add(new Token(matchedDef.Type, match, position));
-                position += (uint)match.Length;
             }
+
             return tokens;
         }
     }
