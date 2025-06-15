@@ -1,32 +1,34 @@
-using int = Integer32;
+using int = Int32;
 
-func int BinarySearch(int[] arr, int target)
+func void FizzBuzz(int n)
 {
-    int left = 0;
-    int right = arr.Length - 1;
-
-    while (left <= right)
+    int ifnt = 1;
+    while (ifnt <= n)
     {
-        int mid = left + (right - left) / 2;
-        if (arr[mid] == target)
+        if(ifnt % 15 == 0)
         {
-            return mid;
-        }
-        else if (arr[mid] < target)
-        {
-            left = mid + 1;
         }
         else
         {
-            right = mid - 1;
+            if (ifnt % 3 == 0)
+            {
+            }
+            else
+            {
+                if (ifnt % 5 == 0)
+                {
+                }
+                else
+                {
+                }
+            }
         }
+        ifnt = ifnt + 1;
     }
-    return -1;
 }
 
 func void Main()
 {
-    int[] arr = [1, 3, 5, 7, 9, 11];
-    int target = 7;
-    BinarySearch(arr, target);
+    int count = 20;
+    FizzBuzz(count);
 }

@@ -7,12 +7,15 @@ namespace Compiler
         static void Main()
         {
             RegexLexer lexer = new();
-            var a = lexer.TokenizeFile(@"..\..\..\SampleCode.txt");
-
-            foreach (var token in a)
-            {
-                Console.WriteLine(token);
-            }
+            var tokens = lexer.TokenizeFile(
+#if DEBUG
+                filePath: @"..\..\..\SampleCode.txt",
+#else
+                filePath: @"SampleCode.txt",
+#endif
+                onUnexpectedToken: (lineIdx, charIdx, val)
+                    => Console.WriteLine($"LEXER: Unexpected token at line {lineIdx + 1}.{charIdx + 1}: \"{val}\"")
+            );
         }
     }
 }

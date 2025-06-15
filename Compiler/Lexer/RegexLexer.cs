@@ -1,4 +1,3 @@
-using System.ComponentModel.DataAnnotations;
 using System.Text.RegularExpressions;
 
 namespace Compiler.Lexer
@@ -46,26 +45,30 @@ namespace Compiler.Lexer
             new(30, TokenType.CloseAngleBracket, @"(>)"),
 
             new(40, TokenType.Identifier, @"\b([a-zA-Z_][a-zA-Z0-9_]*)\b"),
+
+            new(uint.MaxValue, TokenType.Undefined, @"(.)")
         ];
 
-        public List<Token> TokenizeFile(string filePath)
+        public List<Token> TokenizeFile(string filePath, ILexer.OnUnexpectedTokenHandler? onUnexpectedToken = null)
         {
             string[] lines = File.ReadAllLines(filePath);
-            return Tokenize(lines);
+            return Tokenize(lines, onUnexpectedToken);
         }
 
-        public List<Token> Tokenize(string[] lines)
+        public List<Token> Tokenize(string[] lines, ILexer.OnUnexpectedTokenHandler? onUnexpectedToken = null)
         {
             var orderedDefinitions = tokenDefinitions.OrderBy(d => d.Priority);
+#if DEBUG
             if (!orderedDefinitions.Any()) throw new InvalidOperationException("No token definitions available!");
 
             var missing = Enum.GetValues<TokenType>().Except(tokenDefinitions.Select(def => def.Type)).Where(type => !Enum.GetName(type)!.Contains("Flag"));
             if (missing.Any()) throw new InvalidOperationException($"Some token types are missing definitions: {string.Join(", ", missing)}");
+#endif
 
             List<Token> tokens = [];
 
-            for(uint lineIdx = 0; lineIdx < lines.Length; lineIdx++)
-            {     
+            for (uint lineIdx = 0; lineIdx < lines.Length; lineIdx++)
+            {
                 uint charIdx = 0;
 
                 while (charIdx < lines[lineIdx].Length)
@@ -83,9 +86,12 @@ namespace Compiler.Lexer
                         break;
                     }
 
-                    if (matchedDef == null || !match.Success) throw new InvalidOperationException($"Unexpected character in line {lineIdx} at position {charIdx}: '{lines[(int)charIdx]}'!");
+                    if (onUnexpectedToken != null && matchedDef!.Type == TokenType.Undefined)
+                    {
+                        onUnexpectedToken(lineIdx, charIdx, match.Value);
+                    }
 
-                    tokens.Add(new Token(matchedDef.Type, match, lineIdx, charIdx));
+                    tokens.Add(new Token(matchedDef!.Type, match, lineIdx, charIdx));
                     charIdx += (uint)match.Length;
                 }
             }
