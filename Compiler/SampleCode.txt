@@ -1,9 +1,9 @@
 alias
-   int = Int32 
-;  alias byte=Int8;
+   int = int32 
+;  alias byte=int8;
 
 
-func void FizzBuzz(Int16 n, byte throwaway)
+func void FizzBuzz(int16 n, byte throwaway)
 {
     int ifnt = 1;
     while (ifnt <= n)

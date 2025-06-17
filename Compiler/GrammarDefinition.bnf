@@ -1,0 +1,106 @@
+# Grammar Definition
+# Terminals are either literal strings (in quotes) or regex (REGEX ...)
+# Use the special keyword 'empty' to indicate an empty/epsilon rule
+# Comments start with '#' and cannot go on the same line as a rule
+
+# must be the first line
+entrypoint: Program
+
+# --- Terminals ---
+id              : REGEX [A-Za-z][A-Za-z0-9]*;
+intLiteral      : REGEX [0-9]+;
+boolLiteral     : "true" | "false";
+
+# --- Nonterminals ---
+
+# Top-level structure
+Program         : TopLevelList FunctionDefList;
+TopLevelList    : TopLevel TopLevelList
+                | empty
+                ;
+TopLevel        : AliasDirective
+                | FunctionDef
+                | VarDefStatement
+                ;
+# Top-level function definitions
+FunctionDefList : FunctionDef FunctionDefList
+                | empty
+                ;
+# Statements (can appear in blocks)
+Statement       : IfStatement
+                | WhileLoopStatement
+                | VarDefStatement
+                | FunctionCallStatement
+                ;
+
+# Types
+Type            : primitiveType | id;
+ReturnType      : "void" | Type;
+primitiveType   : "int8" | "int16" | "int32" | "int64" | "bool";
+
+# Expressions
+Expr        : ValueExpr
+            | FunctionCall
+            | id
+            ;
+ValueExpr   : IntExpr
+            | BoolExpr
+            ;
+BoolExpr    : Expr "==" Expr
+            | BoolExpr "&" BoolExpr
+            | BoolExpr "|" BoolExpr
+            | "(" BoolExpr ")"
+            | boolLiteral
+            | IntExpr "<" IntExpr
+            | IntExpr ">" IntExpr
+            | IntExpr "<=" IntExpr
+            | IntExpr ">=" IntExpr
+            | FunctionCall
+            | id
+            ;
+IntExpr     : IntExpr "+" IntSecondary
+            | IntExpr "-" IntSecondary
+            | IntSecondary
+            ;
+IntSecondary: IntSecondary "*" IntBase
+            | IntSecondary "/" IntBase
+            | IntSecondary "%" IntBase
+            | IntPrimary
+            ;
+IntBase     : "(" IntExpr ")"
+            | intLiteral
+            | FunctionCall
+            | id
+            ;
+
+# Blocks
+Block           : "{" StatementList "}";
+StatementList   : Statement StatementList
+                | empty
+                ;
+# --- Alias Directives ---
+AliasDirective : "alias" id "=" Type ";";
+
+# --- Functions ---
+FunctionDef             : "func" ReturnType id '(' ParamDefList ')' Block;
+ParamDefList            : ParamDef ',' ParamDefList
+                        | ParamDef
+                        | empty
+                        ;
+ParamDef                : Type id;
+ParamList               : Param ',' ParamList
+                        | Param
+                        | empty
+                        ;
+Param                   : Expr;
+FunctionCall            : id '(' ParamList ')';
+FunctionCallStatement   : FunctionCall ';';
+
+# --- Control Statements ---
+IfStatement         : "if" '(' BoolExpr ')' Block "else" Block
+                    | "if" '(' BoolExpr ')' Block
+                    ;
+WhileLoopStatement  : "while" '(' BoolExpr ')' Block;
+
+# --- Variables ---
+VarDefStatement     : Type id '=' Expr ';';
