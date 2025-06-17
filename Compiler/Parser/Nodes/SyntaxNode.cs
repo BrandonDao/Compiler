@@ -1,21 +1,17 @@
-using System.Runtime.InteropServices.Marshalling;
 using Compiler.Lexer;
 
 namespace Compiler.Parser.Nodes
 {
-    public abstract class SyntaxNode
+    public abstract class SyntaxNode(List<SyntaxNode> children)
     {
+        public List<SyntaxNode> Children { get; } = children;
+
+        public SyntaxNode() : this([]) { }
+
         public uint StartLine { get; set; }
         public uint StartChar { get; set; }
         public uint EndLine { get; set; }
         public uint EndChar { get; set; }
-    }
-
-    public abstract class ParentNode(List<SyntaxNode> children) : SyntaxNode
-    {
-        public List<SyntaxNode> Children { get; } = children;
-
-        public ParentNode() : this([]) { }
 
         public virtual void UpdateRange()
         {
@@ -26,9 +22,21 @@ namespace Compiler.Parser.Nodes
             EndLine = Children[^1].EndLine;
             EndChar = Children[^1].EndChar;
         }
+
+        // prints entire subtree
+        public virtual string GetPrintable(int indent = 0)
+        {
+            var indentString = new string(' ', indent);
+            var result = $"{indentString}{GetType().Name} [{StartLine}.{StartChar} - {EndLine}.{EndChar}]\n";
+            foreach (var child in Children)
+            {
+                result += child.GetPrintable(indent + 4);
+            }
+            return result;
+        }
     }
 
-    public abstract class LeafWrapperNode : ParentNode
+    public abstract class LeafWrapperNode : SyntaxNode
     {
         public Token Token { get; }
 
@@ -63,13 +71,24 @@ namespace Compiler.Parser.Nodes
                 EndChar = Token.EndChar;
             }
         }
+
+        public override string GetPrintable(int indent = 0)
+        {
+            var indentString = new string(' ', indent);
+            var result = $"{indentString}{GetType().Name} [{StartLine}.{StartChar} - {EndLine}.{EndChar}] Token: {Token.Value}\n";
+            foreach (var child in Children)
+            {
+                result += child.GetPrintable(indent + 4);
+            }
+            return result;
+        }
     }
 
-    public class ProgramNode() : ParentNode
+    public class ProgramNode() : SyntaxNode
     {
     }
 
-    public class AliasDirective(string alias, string typeName) : ParentNode
+    public class AliasDirective(string alias, string typeName) : SyntaxNode
     {
         public string Alias { get; } = alias;
         public string TypeName { get; } = typeName;

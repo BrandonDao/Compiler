@@ -2,20 +2,14 @@ using Compiler.Lexer;
 
 namespace Compiler.Parser.Nodes.Whitespace
 {
-    public class Whitespace : SyntaxNode
+    public class Whitespace(Token token, bool isLeading) : LeafWrapperNode(token)
     {
-        public Token Token { get; }
-        public bool IsLeading { get; }
+        public bool IsLeading { get; } = isLeading;
 
-        public Whitespace(Token token, bool isLeading)
+        public override string GetPrintable(int indent = 0)
         {
-            Token = token;
-            IsLeading = isLeading;
-            
-            StartLine = token.LineIndex;
-            StartChar = token.StartChar;
-            EndLine = token.LineIndex;
-            EndChar = token.EndChar;
+            var indentString = new string(' ', indent);
+            return $"{indentString}{(IsLeading ? "Leading" : "Trailing")} {GetType().Name} [{StartLine}.{StartChar} - {EndLine}.{EndChar}]\n";
         }
     }
 }

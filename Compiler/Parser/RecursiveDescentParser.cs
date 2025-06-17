@@ -38,20 +38,20 @@ namespace Compiler.Parser
             ParseWhitespace(usingKeyword.Children, false);
 
             if (!Match(TokenType.Identifier, out Token? aliasIdentifierToken))
-                throw new InvalidOperationException("Expected identifier after 'alias' keyword!");
+                throw new InvalidOperationException($"Expected identifier after 'alias' keyword, found instead: {tokens[position]}!");
 
             IdentifierName aliasIdentifier = new(aliasIdentifierToken);
             ParseWhitespace(aliasIdentifier.Children, false);
             aliasIdentifier.UpdateRange();
 
             if (!Match(TokenType.AssignmentOperator, out Token? assignmentOpToken))
-                throw new InvalidOperationException("Expected assignment operator '=' in alias directive!");
+                throw new InvalidOperationException($"Expected assignment operator '=' in alias directive, found instead: {tokens[position]}!");
 
             AssignmentOperator assignmentOperator = new(assignmentOpToken);
             ParseWhitespace(assignmentOperator.Children, false);
             assignmentOperator.UpdateRange();
 
-            ParentNode originalTypeOrIdentifier;
+            SyntaxNode originalTypeOrIdentifier;
             if (Match(TokenType.Identifier, out Token? originalIdentifierToken))
             {
                 originalTypeOrIdentifier = new IdentifierName(originalIdentifierToken);
@@ -76,12 +76,12 @@ namespace Compiler.Parser
             {
                 originalTypeOrIdentifier = new Boolean(originalIdentifierToken);
             }
-            else throw new InvalidOperationException("Expected identifier after assignment operator '=' in alias directive!");
+            else throw new InvalidOperationException($"Expected identifier after assignment operator '=' in alias directive, found instead: {tokens[position]}!");
 
             ParseWhitespace(originalTypeOrIdentifier.Children, false);
 
             if (!Match(TokenType.Semicolon, out Token? semicolonToken))
-                throw new InvalidOperationException("Expected semicolon ';' at the end of alias directive!");
+                throw new InvalidOperationException($"Expected semicolon ';' at the end of alias directive, found instead: {tokens[position]}!");
 
             Semicolon semicolon = new(semicolonToken);
             ParseWhitespace(semicolon.Children, false);
