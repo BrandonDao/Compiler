@@ -1,4 +1,4 @@
-using int = Int32;
+alias int = Int32;
 
 func void FizzBuzz(int n)
 {

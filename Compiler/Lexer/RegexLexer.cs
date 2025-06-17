@@ -11,7 +11,6 @@ namespace Compiler.Lexer
             new(0, TokenType.Int32, @"\b(Int32)\b"),
             new(0, TokenType.Int64, @"\b(Int64)\b"),
             new(0, TokenType.Boolean, @"\b(Boolean)\b"),
-            new(0, TokenType.Void, @"\b(void)\b"),
 
             new(5, TokenType.EqualityOperator, @"(==)"),
             new(5, TokenType.DotOperator, @"(\.)"),
@@ -23,9 +22,10 @@ namespace Compiler.Lexer
 
             new(7, TokenType.AssignmentOperator, @"(=)"),
 
-            new(10, TokenType.Using, @"\b(using)\b"),
+            new(10, TokenType.Alias, @"\b(alias)\b"),
             new(10, TokenType.While, @"\b(while)\b"),
             new(10, TokenType.Func, @"\b(func)\b"),
+            new(10, TokenType.Void, @"\b(void)\b"),
             new(10, TokenType.Return, @"\b(return)\b"),
             new(10, TokenType.IfStatement, @"\b(if)\b"),
             new(10, TokenType.ElseStatement, @"\b(else)\b"),

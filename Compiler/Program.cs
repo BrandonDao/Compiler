@@ -1,4 +1,5 @@
 ﻿using Compiler.Lexer;
+using Compiler.Parser;
 
 namespace Compiler
 {
@@ -16,6 +17,10 @@ namespace Compiler
                 onUnexpectedToken: (lineIdx, charIdx, val)
                     => Console.WriteLine($"LEXER: Unexpected token at line {lineIdx + 1}.{charIdx + 1}: \"{val}\"")
             );
+
+            RecursiveDescentParser parser = new([.. tokens]); // to array
+            var root = new Parser.Nodes.ProgramNode();
+            parser.ParseAliasDirective(root);
         }
     }
 }

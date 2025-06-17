@@ -5,13 +5,12 @@ namespace Compiler.Lexer
     {
         Undefined = 0,
 
-        PrimitiveFlag = (0b1000_0000 << 8) | IdentifierFlag,
+        PrimitiveFlag = 0b1000_0000 << 8,
         Int8,
         Int16,
         Int32,
         Int64,
         Boolean,
-        Void,
 
 
         OperatorFlag = 0b0100_0000 << 8,
@@ -25,9 +24,10 @@ namespace Compiler.Lexer
         AssignmentOperator,
 
         KeywordFlag = 0b0010_0000 << 8,
-        Using,
+        Alias,
         While,
         Func,
+        Void,
         Return,
         IfStatement,
         ElseStatement,
