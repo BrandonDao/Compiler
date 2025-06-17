@@ -1,0 +1,17 @@
+Basic Definitions
+Identifier	-> id
+Primitive	-> primitive
+Type		-> id
+		 | primitive
+
+
+Functions
+-> func Type id(ParamList) {  Body  }
+
+	ParamList	-> Param, ParamList
+			 | Param
+	Param		-> Type id
+
+Alias Directives	
+-> alias id = id
+ | alias id = primitive

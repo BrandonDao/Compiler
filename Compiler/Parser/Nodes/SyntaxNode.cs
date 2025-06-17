@@ -1,4 +1,6 @@
+using System.Net.Http.Headers;
 using Compiler.Lexer;
+using Compiler.Parser.Nodes.Identifiers;
 
 namespace Compiler.Parser.Nodes
 {
@@ -92,5 +94,24 @@ namespace Compiler.Parser.Nodes
     {
         public string Alias { get; } = alias;
         public string TypeName { get; } = typeName;
+    }
+    public class ParameterList() : SyntaxNode;
+    public class Parameter(IdentifierName identifier, LeafWrapperNode type) : SyntaxNode([identifier, type])
+    {
+        public string Name { get; } = identifier.Name;
+        public TokenType Type { get; } = type.Token.Type;
+    }
+    public class Block : SyntaxNode
+    {
+        public override string GetPrintable(int indent = 0)
+        {
+            return "BLOCK OF CODE HERE";
+        }
+    }
+    public class FunctionDeclaration(IdentifierName identifier, LeafWrapperNode returnType, ParameterList parameterList, Block block)
+        : SyntaxNode([identifier, returnType, parameterList, block])
+    {
+        public string Name { get; } = identifier.Name;
+        public TokenType ReturnType { get; } = returnType.Token.Type;
     }
 }

@@ -19,8 +19,7 @@ namespace Compiler
             );
 
             RecursiveDescentParser parser = new([.. tokens]); // to array
-            var root = new Parser.Nodes.ProgramNode();
-            parser.ParseAliasDirective(root);
+            var root = parser.ParseProgram();
 
             Console.WriteLine(root.GetPrintable(0));
         }

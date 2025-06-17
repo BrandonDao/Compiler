@@ -30,7 +30,26 @@ namespace Compiler.Parser
             return 0;
         }
 
-        public void ParseAliasDirective(ProgramNode program)
+        public SyntaxNode ParseProgram()
+        {
+            ProgramNode program = new();
+            ParseWhitespace(program.Children, true);
+
+            TryParseAliasDirectives(program);
+
+            // while (!IsAtEnd())
+            // {
+                if (Check(TokenType.Func))
+                {
+                    program.Children.Add(ParseFunctionDeclaration());
+                }
+            // }
+
+            program.UpdateRange();
+            return program;
+        }
+
+        private void TryParseAliasDirectives(ProgramNode programNode)
         {
             if (!Match(TokenType.Alias, out Token? usingToken)) return;
 
@@ -51,34 +70,7 @@ namespace Compiler.Parser
             ParseWhitespace(assignmentOperator.Children, false);
             assignmentOperator.UpdateRange();
 
-            SyntaxNode originalTypeOrIdentifier;
-            if (Match(TokenType.Identifier, out Token? originalIdentifierToken))
-            {
-                originalTypeOrIdentifier = new IdentifierName(originalIdentifierToken);
-            }
-            else if (Match(TokenType.Int8, out originalIdentifierToken))
-            {
-                originalTypeOrIdentifier = new Int8(originalIdentifierToken);
-            }
-            else if (Match(TokenType.Int16, out originalIdentifierToken))
-            {
-                originalTypeOrIdentifier = new Int16(originalIdentifierToken);
-            }
-            else if (Match(TokenType.Int32, out originalIdentifierToken))
-            {
-                originalTypeOrIdentifier = new Int32(originalIdentifierToken);
-            }
-            else if (Match(TokenType.Int64, out originalIdentifierToken))
-            {
-                originalTypeOrIdentifier = new Int64(originalIdentifierToken);
-            }
-            else if (Match(TokenType.Boolean, out originalIdentifierToken))
-            {
-                originalTypeOrIdentifier = new Boolean(originalIdentifierToken);
-            }
-            else throw new InvalidOperationException($"Expected identifier after assignment operator '=' in alias directive, found instead: {tokens[position]}!");
-
-            ParseWhitespace(originalTypeOrIdentifier.Children, false);
+            (LeafWrapperNode originalTypeOrIdentifier, Token? originalIdentifierToken) = ParseType();
 
             if (!Match(TokenType.Semicolon, out Token? semicolonToken))
                 throw new InvalidOperationException($"Expected semicolon ';' at the end of alias directive, found instead: {tokens[position]}!");
@@ -95,7 +87,138 @@ namespace Compiler.Parser
             aliasDirective.Children.Add(semicolon);
             aliasDirective.UpdateRange();
 
-            program.Children.Add(aliasDirective);
+            programNode.Children.Add(aliasDirective);
+            TryParseAliasDirectives(programNode);
+        }
+
+        private FunctionDeclaration ParseFunctionDeclaration()
+        {
+            Token funcToken = tokens[position++];
+            FuncKeyword funcKeyword = new(funcToken);
+            ParseWhitespace(funcKeyword.Children, false);
+
+            (LeafWrapperNode returnType, _) = ParseReturnType();
+
+            if (!Match(TokenType.Identifier, out Token? functionNameIdToken))
+                throw new InvalidOperationException($"Expected identifier for function name, found instead: {tokens[position]}!");
+
+            IdentifierName functionNameId = new(functionNameIdToken);
+            ParseWhitespace(functionNameId.Children, false);
+            functionNameId.UpdateRange();
+
+            ParameterList parameterList = ParseParameterList();
+
+            Block block = ParseBlock();
+
+            return new FunctionDeclaration(functionNameId, returnType, parameterList, block);
+
+            ParameterList ParseParameterList()
+            {
+                if (!Match(TokenType.OpenParenthesis, out Token? openParenToken))
+                    throw new InvalidOperationException($"Expected '(' to start parameter list, found instead: {tokens[position]}!");
+
+                ParameterList parameterList = new();
+
+                OpenParenthesis openParenthesis = new(openParenToken);
+                ParseWhitespace(openParenthesis.Children, false);
+                openParenthesis.UpdateRange();
+
+                while (!Check(TokenType.CloseParenthesis))
+                {
+                    Parameter parameter = ParseParameter();
+                    parameterList.Children.Add(parameter);
+
+                    if (Match(TokenType.Comma, out Token? commaToken))
+                    {
+                        Comma comma = new(commaToken);
+                        ParseWhitespace(comma.Children, false);
+                        comma.UpdateRange();
+                        parameterList.Children.Add(comma);
+                    }
+                    else if (Check(TokenType.CloseParenthesis))
+                    {
+                        Token closeParenToken = Advance();
+                        CloseParenthesis closeParenthesis = new(closeParenToken);
+                        ParseWhitespace(closeParenthesis.Children, false);
+                        closeParenthesis.UpdateRange();
+                        break;
+                    }
+                    else throw new InvalidOperationException($"Expected ',' or ')' after parameter, found instead: {tokens[position]}!");
+                }
+
+                return parameterList;
+
+                Parameter ParseParameter()
+                {
+                    (LeafWrapperNode type, _) = ParseType();
+                    ParseWhitespace(type.Children, false);
+                    type.UpdateRange();
+
+                    if (!Match(TokenType.Identifier, out Token? paramNameToken))
+                        throw new InvalidOperationException($"Expected identifier for parameter name, found instead: {tokens[position]}!");
+
+                    IdentifierName id = new(paramNameToken);
+                    ParseWhitespace(id.Children, false);
+                    id.UpdateRange();
+
+                    return new Parameter(id, type);
+                }
+            }
+        }
+
+        private (LeafWrapperNode type, Token token) ParseType()
+        {
+            LeafWrapperNode originalType;
+            if (Match(TokenType.Identifier, out Token? token))
+            {
+                originalType = new IdentifierName(token);
+            }
+            else if (Match(TokenType.Int8, out token))
+            {
+                originalType = new Int8(token);
+            }
+            else if (Match(TokenType.Int16, out token))
+            {
+                originalType = new Int16(token);
+            }
+            else if (Match(TokenType.Int32, out token))
+            {
+                originalType = new Int32(token);
+            }
+            else if (Match(TokenType.Int64, out token))
+            {
+                originalType = new Int64(token);
+            }
+            else if (Match(TokenType.Boolean, out token))
+            {
+                originalType = new Boolean(token);
+            }
+            else throw new InvalidOperationException($"Expected type (identifier or primitive), found instead: {tokens[position]}!");
+
+            ParseWhitespace(originalType.Children, false);
+            originalType.UpdateRange();
+            return (originalType, token);
+        }
+        private (LeafWrapperNode type, Token token) ParseReturnType()
+        {
+            if (Match(TokenType.Void, out Token? token))
+            {
+                LeafWrapperNode voidType = new VoidKeyword(token);
+                ParseWhitespace(voidType.Children, false);
+                voidType.UpdateRange();
+                return (voidType, token);
+            }
+
+            return ParseType();
+        }
+
+        private Block ParseBlock()
+        {
+#if DEBUG
+            return new Block();
+#else
+            throw new NotImplementedException("Block parsing is not yet implemented.");
+#endif
         }
 
         // Utility methods
