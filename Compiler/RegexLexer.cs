@@ -1,36 +1,40 @@
 using System.Text.RegularExpressions;
-using Compiler.Shared.Parser.Nodes.Primitives;
-using Compiler.Shared.Parser.Nodes.Operators;
-using Boolean = Compiler.Shared.Parser.Nodes.Primitives.Boolean;
-using Int16 = Compiler.Shared.Parser.Nodes.Primitives.Int16;
-using Int32 = Compiler.Shared.Parser.Nodes.Primitives.Int32;
-using Int64 = Compiler.Shared.Parser.Nodes.Primitives.Int64;
-using Compiler.Parser.Nodes;
-using Compiler.Shared.Parser.Nodes.Punctuation;
-using Compiler.Shared.Parser.Nodes.Identifiers;
-using Compiler.Shared.Parser.Nodes;
+using System.Reflection;
+using CompilerLib.Lexer;
+using CompilerLib.Parser.Nodes.Primitives;
+using CompilerLib.Parser.Nodes.Operators;
+using CompilerLib.Parser.Nodes.Literals;
+using CompilerLib.Parser.Nodes.Punctuation;
+using CompilerLib.Parser.Nodes.Identifiers;
+using Bool = CompilerLib.Parser.Nodes.Primitives.Bool;
+using Int16 = CompilerLib.Parser.Nodes.Primitives.Int16;
+using Int32 = CompilerLib.Parser.Nodes.Primitives.Int32;
+using Int64 = CompilerLib.Parser.Nodes.Primitives.Int64;
+using CompilerLib.Parser.Nodes;
+using System.Text;
 
-namespace Compiler.Lexer
+namespace Compiler
 {
     public class RegexLexer : ILexer
     {
         private static readonly TokenDefinition[] tokenDefinitions =
         [
-            new(0, TokenType.Int8, @"\b(int8)\b", (v, sl, sc, el, ec) => new Int8(v, sl, sc, el, ec)),
-            new(0, TokenType.Int16, @"\b(int16)\b", (v, sl, sc, el, ec) => new Int16(v, sl, sc, el, ec)),
-            new(0, TokenType.Int32, @"\b(int32)\b", (v, sl, sc, el, ec) => new Int32(v, sl, sc, el, ec)),
-            new(0, TokenType.Int64, @"\b(int64)\b", (v, sl, sc, el, ec) => new Int64(v, sl, sc, el, ec)),
-            new(0, TokenType.Boolean, @"\b(boolean)\b", (v, sl, sc, el, ec) => new Boolean(v, sl, sc, el, ec)),
+            new(0, @"\b(int8)\b", (v, sl, sc, el, ec) => new Int8(v, sl, sc, el, ec)),
+            new(0, @"\b(int16)\b", (v, sl, sc, el, ec) => new Int16(v, sl, sc, el, ec)),
+            new(0, @"\b(int32)\b", (v, sl, sc, el, ec) => new Int32(v, sl, sc, el, ec)),
+            new(0, @"\b(int64)\b", (v, sl, sc, el, ec) => new Int64(v, sl, sc, el, ec)),
+            new(0, @"\b(bool)\b", (v, sl, sc, el, ec) => new Bool(v, sl, sc, el, ec)),
 
             // new(5, TokenType.EqualityOperator, @"(==)"),
             // new(5, TokenType.DotOperator, @"(\.)"),
             // new(5, TokenType.ModulusOperator, @"(%)"),
-            new(5, TokenType.MinusSign, @"(-)", (v, sl, sc, el, ec) => new NegateOperator(v, sl, sc, el, ec)),
-            new(5, TokenType.PlusSign, @"(\+)", (v, sl, sc, el, ec) => new AddOperator(v, sl, sc, el, ec)),
-            new(5, TokenType.MultiplySign, @"(\*)", (v, sl, sc, el, ec) => new MultiplyOperator(v, sl, sc, el, ec)),
-            new(5, TokenType.DivideSign, @"(/)", (v, sl, sc, el, ec) => new DivideOperator(v, sl, sc, el, ec)),
+            new(5, @"(-)", (v, sl, sc, el, ec) => new NegateOperator(v, sl, sc, el, ec)),
+            new(5, @"(\+)", (v, sl, sc, el, ec) => new AddOperator(v, sl, sc, el, ec)),
+            new(5, @"(\*)", (v, sl, sc, el, ec) => new MultiplyOperator(v, sl, sc, el, ec)),
+            new(5, @"(/)", (v, sl, sc, el, ec) => new DivideOperator(v, sl, sc, el, ec)),
+            new(5, @"(%)", (v, sl, sc, el, ec) => new ModOperator(v, sl, sc, el, ec)),
 
-            new(7, TokenType.AssignmentOperator, @"(=)", (v, sl, sc, el, ec) => new AssignmentOperator(v, sl, sc, el, ec)),
+            new(7, @"(=)", (v, sl, sc, el, ec) => new AssignmentOperator(v, sl, sc, el, ec)),
 
             // new(10, TokenType.Alias, @"\b(alias)\b"),
             // new(10, TokenType.While, @"\b(while)\b"),
@@ -39,24 +43,24 @@ namespace Compiler.Lexer
             // new(10, TokenType.Return, @"\b(return)\b"),
             // new(10, TokenType.IfStatement, @"\b(if)\b"),
             // new(10, TokenType.ElseStatement, @"\b(else)\b"),
-            new(15, TokenType.IntegerLiteral, @"\b(\d+)\b"),
-            new(15, TokenType.BooleanLiteral, @"\b(true|false)\b"),
+            new(15, @"\b(\d+)\b", (v, sl, sc, el, ec) => new IntLiteral(v, sl, sc, el, ec)),
+            new(15, @"\b(true|false)\b", (v, sl, sc, el, ec) => new BoolLiteral(v, sl, sc, el, ec)),
 
-            new(30, TokenType.Whitespace, @"([ \t\r\n]+)"),
-            new(30, TokenType.Semicolon, @"(;)", (v, sl, sc, el, ec) => new Semicolon(v, sl, sc, el, ec)),
-            new(30, TokenType.Comma, @"(,)", (v, sl, sc, el, ec) => new Comma(v, sl, sc, el, ec)),
-            new(30, TokenType.OpenBrace, @"(\{)", (v, sl, sc, el, ec) => new OpenBrace(v, sl, sc, el, ec)),
-            new(30, TokenType.CloseBrace, @"(\})", (v, sl, sc, el, ec) => new CloseBrace(v, sl, sc, el, ec)),
-            new(30, TokenType.OpenParenthesis, @"(\()", (v, sl, sc, el, ec) => new OpenParenthesis(v, sl, sc, el, ec)),
-            new(30, TokenType.CloseParenthesis, @"(\))", (v, sl, sc, el, ec) => new CloseParenthesis(v, sl, sc, el, ec)),
-            new(30, TokenType.OpenSquareBracket, @"(\[)", (v, sl, sc, el, ec) => new OpenSquareBracket(v, sl, sc, el, ec)),
-            new(30, TokenType.CloseSquareBracket, @"(\])", (v, sl, sc, el, ec) => new CloseSquareBracket(v, sl, sc, el, ec)),
-            new(30, TokenType.OpenAngleBracket, @"(<)", (v, sl, sc, el, ec) => new OpenAngleBracket(v, sl, sc, el, ec)),
-            new(30, TokenType.CloseAngleBracket, @"(>)", (v, sl, sc, el, ec) => new CloseAngleBracket(v, sl, sc, el, ec)),
+            new(30, @"([ \t\r\n]+)", (v, sl, sc, el, ec) => new Whitespace(v, sl, sc, el, ec)),
+            new(30, @"(;)", (v, sl, sc, el, ec) => new Semicolon(v, sl, sc, el, ec)),
+            new(30, @"(,)", (v, sl, sc, el, ec) => new Comma(v, sl, sc, el, ec)),
+            new(30, @"(\{)", (v, sl, sc, el, ec) => new OpenBrace(v, sl, sc, el, ec)),
+            new(30, @"(\})", (v, sl, sc, el, ec) => new CloseBrace(v, sl, sc, el, ec)),
+            new(30, @"(\()", (v, sl, sc, el, ec) => new OpenParenthesis(v, sl, sc, el, ec)),
+            new(30, @"(\))", (v, sl, sc, el, ec) => new CloseParenthesis(v, sl, sc, el, ec)),
+            new(30, @"(\[)", (v, sl, sc, el, ec) => new OpenSquareBracket(v, sl, sc, el, ec)),
+            new(30, @"(\])", (v, sl, sc, el, ec) => new CloseSquareBracket(v, sl, sc, el, ec)),
+            new(30, @"(<)", (v, sl, sc, el, ec) => new OpenAngleBracket(v, sl, sc, el, ec)),
+            new(30, @"(>)", (v, sl, sc, el, ec) => new CloseAngleBracket(v, sl, sc, el, ec)),
 
-            new(40, TokenType.Identifier, @"\b([a-zA-Z_][a-zA-Z0-9_]*)\b", (v, sl, sc, el, ec) => new IdentifierName(v, sl, sc, el, ec)),
+            new(40, @"\b([a-zA-Z_][a-zA-Z0-9_]*)\b", (v, sl, sc, el, ec) => new IdentifierName(v, sl, sc, el, ec)),
 
-            new(uint.MaxValue, TokenType.Undefined, @"(.)", (v, sl, sc, el, ec) => new Undefined(v, sl, sc, el, ec))
+            new(uint.MaxValue, @"(.)", (v, sl, sc, el, ec) => new Undefined(v, sl, sc, el, ec))
         ];
 
         public List<LeafNode> TokenizeFile(string filePath, ILexer.OnUnexpectedTokenHandler? onUnexpectedToken = null)
@@ -71,24 +75,37 @@ namespace Compiler.Lexer
 #if DEBUG
             if (!orderedDefinitions.Any()) throw new InvalidOperationException("No token definitions available!");
 
-            var missing = Enum.GetValues<TokenType>().Except(tokenDefinitions.Select(def => def.Type)).Where(type => !Enum.GetName(type)!.Contains("Flag"));
+            var LeafNodeType = typeof(LeafNode);
+            var nodeTypes = (
+                    Assembly.GetAssembly(LeafNodeType)?
+                            .GetTypes()
+                            .Where(t => t.IsSubclassOf(LeafNodeType) && !t.IsAbstract))
+                ?? throw new InvalidOperationException($"Could not find any classes deriving type of {LeafNodeType}");
+
+            var missing = nodeTypes.Except(tokenDefinitions.Select(def => def.NodeFactory(string.Empty, 0, 0, 0, 0).GetType()));
+
             if (missing.Any()) throw new InvalidOperationException($"Some token types are missing definitions: {string.Join(", ", missing)}");
 #endif
 
             List<LeafNode> tokens = [];
+            StringBuilder line = new();
 
             for (uint lineIdx = 0; lineIdx < lines.Length; lineIdx++)
             {
+                line.Clear();
+                line.Append(lines[lineIdx]);
+                line.Append('\n');
+
                 uint charIdx = 0;
 
-                while (charIdx < lines[lineIdx].Length)
+                while (charIdx < line.Length)
                 {
                     TokenDefinition? matchedDef = null;
                     Match match = Match.Empty;
 
                     foreach (var def in orderedDefinitions)
                     {
-                        match = def.Regex.Match(lines[lineIdx], (int)charIdx);
+                        match = def.Regex.Match(line.ToString(), (int)charIdx);
 
                         if (!match.Success || match.Index != charIdx) continue;
 
@@ -96,23 +113,34 @@ namespace Compiler.Lexer
                         break;
                     }
 
-                    if (onUnexpectedToken != null && matchedDef!.Type == TokenType.Undefined)
+                    LeafNode node = matchedDef!.NodeFactory.Invoke(
+                        value: match.Value,
+                        startLine: lineIdx,
+                        startChar: (uint)(charIdx + match.Index),
+                        endLine: lineIdx,
+                        endChar: (uint)(charIdx + match.Index + match.Length));
+
+                    if (onUnexpectedToken != null && node is Undefined)
                     {
                         onUnexpectedToken(lineIdx, charIdx, match.Value);
                     }
-
-                    tokens.Add(matchedDef!.NodeFactory.Invoke(
-                        match.Value,
-                        lineIdx,
-                        (uint)(charIdx + match.Index),
-                        lineIdx,
-                        (uint)(charIdx + match.Index + match.Length)));
+                    tokens.Add(node);
 
                     charIdx += (uint)match.Length;
                 }
             }
 
             return tokens;
+        }
+
+        public static string Detokenize(List<LeafNode> tokens)
+        {
+            StringBuilder builder = new();
+            foreach (var token in tokens)
+            {
+                builder.Append(token.Value);
+            }
+            return builder.ToString();
         }
     }
 }

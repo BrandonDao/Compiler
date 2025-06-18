@@ -1,7 +1,4 @@
-﻿using Compiler.Lexer;
-using Compiler.Parser;
-
-namespace Compiler
+﻿ namespace Compiler
 {
     internal class Program
     {
@@ -17,8 +14,9 @@ namespace Compiler
                 onUnexpectedToken: (lineIdx, charIdx, val)
                     => Console.WriteLine($"LEXER: Unexpected token at line {lineIdx + 1}.{charIdx + 1}: \"{val}\"")
             );
+            Console.WriteLine(RegexLexer.Detokenize(tokens));
 
-            var grammar = GrammarLoader.Load(@"..\..\..\GrammarDefinition.bnf");
+            //var grammar = GrammarLoader.Load(@"..\..\..\GrammarDefinition.bnf");
             // var parser = new RecursiveDescentParser([..tokens], grammar);
             // var root = parser.ParseFromGrammar();
 
