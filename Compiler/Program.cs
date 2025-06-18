@@ -18,10 +18,11 @@ namespace Compiler
                     => Console.WriteLine($"LEXER: Unexpected token at line {lineIdx + 1}.{charIdx + 1}: \"{val}\"")
             );
 
-            RecursiveDescentParser parser = new([.. tokens]); // to array
-            var root = parser.ParseProgram();
+            var grammar = GrammarLoader.Load(@"..\..\..\GrammarDefinition.bnf");
+            // var parser = new RecursiveDescentParser([..tokens], grammar);
+            // var root = parser.ParseFromGrammar();
 
-            Console.WriteLine(root.GetPrintable(0));
+            // Console.WriteLine(root.GetPrintable(0));
         }
     }
 }

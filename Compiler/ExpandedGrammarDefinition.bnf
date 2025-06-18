@@ -18,7 +18,18 @@ Program         : TopLevelList;
 TopLevelList    : TopLevel TopLevelList
                 | empty
                 ;
-TopLevel        : VarDefStatement
+TopLevel        : AliasDirective
+                | FunctionDef
+                ;
+# Top-level function definitions
+FunctionDefList : FunctionDef FunctionDefList
+                | empty
+                ;
+# Statements (can appear in blocks)
+Statement       : IfStatement
+                | WhileLoopStatement
+                | VarDefStatement
+                | FunctionCallStatement
                 ;
 
 # Types
@@ -71,6 +82,36 @@ IntBase         : "(" IntExpr ")"
                 | id
                 ;
 
+
+
+# Blocks
+Block           : "{" StatementList "}";
+StatementList   : Statement StatementList
+                | empty
+                ;
+# --- Alias Directives ---
+AliasDirective : "alias" id "=" Type ";";
+
+# --- Functions ---
+FunctionDef             : "func" ReturnType id "(" ParamDefList ")" Block;
+ParamDefList            : ParamDef "," ParamDefList
+                        | ParamDef
+                        | empty
+                        ;
+ParamDef                : Type id;
+ParamList               : Param "," ParamList
+                        | Param
+                        | empty
+                        ;
+Param                   : Expr;
+FunctionCall            : id "(" ParamList ")";
+FunctionCallStatement   : FunctionCall ";";
+
+# --- Control Statements ---
+IfStatement         : "if" "(" BoolExpr ")" Block "else" Block
+                    | "if" "(" BoolExpr ")" Block
+                    ;
+WhileLoopStatement  : "while" "(" BoolExpr ")" Block;
 
 # --- Variables ---
 VarDefStatement     : Type id "=" Expr ";" ;
