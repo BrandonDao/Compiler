@@ -1,22 +1,38 @@
 namespace CompilerLib.Parser.Nodes.Punctuation
 {
-    public class OpenParenthesis(string value, uint startLine, uint startChar, uint endLine, uint endChar)
-        : Punctuation(value, startLine, startChar, endLine, endChar);
-    public class CloseParenthesis(string value, uint startLine, uint startChar, uint endLine, uint endChar)
-        : Punctuation(value, startLine, startChar, endLine, endChar);
+    public class OpenParenthesis(string value, int startLine, int startChar, int endLine, int endChar)
+        : Punctuation(value, startLine, startChar, endLine, endChar)    {
+        public override string GrammarIdentifier => "OpenParen";
+    }
+    public class CloseParenthesis(string value, int startLine, int startChar, int endLine, int endChar)
+        : Punctuation(value, startLine, startChar, endLine, endChar)    {
+        public override string GrammarIdentifier => "CloseParen";
+    }
 
-    public class OpenBrace(string value, uint startLine, uint startChar, uint endLine, uint endChar)
-        : Punctuation(value, startLine, startChar, endLine, endChar);
-    public class CloseBrace(string value, uint startLine, uint startChar, uint endLine, uint endChar)
-        : Punctuation(value, startLine, startChar, endLine, endChar);
+    public class OpenBrace(string value, int startLine, int startChar, int endLine, int endChar)
+        : Punctuation(value, startLine, startChar, endLine, endChar)    {
+        public override string GrammarIdentifier => "OpenBrace";
+    }
+    public class CloseBrace(string value, int startLine, int startChar, int endLine, int endChar)
+        : Punctuation(value, startLine, startChar, endLine, endChar)    {
+        public override string GrammarIdentifier => "CloseBrace";
+    }
 
-    public class OpenAngleBracket(string value, uint startLine, uint startChar, uint endLine, uint endChar)
-        : Punctuation(value, startLine, startChar, endLine, endChar);
-    public class CloseAngleBracket(string value, uint startLine, uint startChar, uint endLine, uint endChar)
-        : Punctuation(value, startLine, startChar, endLine, endChar);
+    public class OpenAngleBracket(string value, int startLine, int startChar, int endLine, int endChar)
+        : Punctuation(value, startLine, startChar, endLine, endChar)    {
+        public override string GrammarIdentifier => "OpenAngleBracket";
+    }
+    public class CloseAngleBracket(string value, int startLine, int startChar, int endLine, int endChar)
+        : Punctuation(value, startLine, startChar, endLine, endChar)    {
+        public override string GrammarIdentifier => "CloseAngleBracket";
+    }
+    public class OpenSquareBracket(string value, int startLine, int startChar, int endLine, int endChar)
+        : Punctuation(value, startLine, startChar, endLine, endChar)    {
+        public override string GrammarIdentifier => "OpenAngleBracket";
+    }
 
-    public class CloseSquareBracket(string value, uint startLine, uint startChar, uint endLine, uint endChar)
-        : Punctuation(value, startLine, startChar, endLine, endChar);
-    public class OpenSquareBracket(string value, uint startLine, uint startChar, uint endLine, uint endChar)
-        : Punctuation(value, startLine, startChar, endLine, endChar);
+    public class CloseSquareBracket(string value, int startLine, int startChar, int endLine, int endChar)
+        : Punctuation(value, startLine, startChar, endLine, endChar)    {
+        public override string GrammarIdentifier => "CloseSquareBracket";
+    }
 }

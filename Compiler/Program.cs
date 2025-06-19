@@ -1,4 +1,6 @@
-﻿ namespace Compiler
+﻿using Compiler.Parser;
+
+namespace Compiler
 {
     internal class Program
     {
@@ -16,7 +18,7 @@
             );
             Console.WriteLine(RegexLexer.Detokenize(tokens));
 
-            //var grammar = GrammarLoader.Load(@"..\..\..\GrammarDefinition.bnf");
+            // var grammar = GrammarLoader.Load(@"..\..\..\Parser\GrammarDefinition.bnf");
             // var parser = new RecursiveDescentParser([..tokens], grammar);
             // var root = parser.ParseFromGrammar();
 

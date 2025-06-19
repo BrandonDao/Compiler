@@ -1,11 +1,13 @@
+
 using System.Diagnostics;
 
 namespace CompilerLib.Parser.Nodes
 {
     [DebuggerDisplay("{StartLine}[{StartChar}..{EndChar}]: {Value}")]
-    public abstract class LeafNode(string value, uint startLine, uint startChar, uint endLine, uint endChar)
+    public abstract class LeafNode(string value, int startLine, int startChar, int endLine, int endChar)
         : SyntaxNode(startLine, startChar, endLine, endChar)
     {
+        public abstract string GrammarIdentifier { get; }
         public string Value { get; } = value;
 
         public override void UpdateRange()

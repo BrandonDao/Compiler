@@ -1,16 +1,16 @@
 namespace CompilerLib.Parser.Nodes
 {
-    public abstract class SyntaxNode(uint startLine, uint startChar, uint endLine, uint endChar, List<SyntaxNode> children)
+    public abstract class SyntaxNode(int startLine, int startChar, int endLine, int endChar, List<SyntaxNode> children)
     {
         public List<SyntaxNode> Children { get; } = children;
-        public uint StartLine { get; set; } = startLine;
-        public uint StartChar { get; set; } = startChar;
-        public uint EndLine { get; set; } = endLine;
-        public uint EndChar { get; set; } = endChar;
+        public int StartLine { get; set; } = startLine;
+        public int StartChar { get; set; } = startChar;
+        public int EndLine { get; set; } = endLine;
+        public int EndChar { get; set; } = endChar;
 
         public SyntaxNode(List<SyntaxNode> children)
             : this(0, 0, 0, 0, children) { }
-        public SyntaxNode(uint startLine, uint startChar, uint endLine, uint endChar)
+        public SyntaxNode(int startLine, int startChar, int endLine, int endChar)
             : this(startLine, startChar, endLine, endChar, []) { }
         public SyntaxNode() : this([]) { }
 

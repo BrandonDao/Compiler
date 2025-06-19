@@ -25,7 +25,7 @@ namespace Compiler
             new(0, @"\b(int64)\b", (v, sl, sc, el, ec) => new Int64(v, sl, sc, el, ec)),
             new(0, @"\b(bool)\b", (v, sl, sc, el, ec) => new Bool(v, sl, sc, el, ec)),
 
-            // new(5, TokenType.EqualityOperator, @"(==)"),
+            new(5, @"(==)", (v, sl, sc, el, ec) => new EqualityOperator(v, sl, sc, el, ec)),
             // new(5, TokenType.DotOperator, @"(\.)"),
             // new(5, TokenType.ModulusOperator, @"(%)"),
             new(5, @"(-)", (v, sl, sc, el, ec) => new NegateOperator(v, sl, sc, el, ec)),
@@ -33,6 +33,8 @@ namespace Compiler
             new(5, @"(\*)", (v, sl, sc, el, ec) => new MultiplyOperator(v, sl, sc, el, ec)),
             new(5, @"(/)", (v, sl, sc, el, ec) => new DivideOperator(v, sl, sc, el, ec)),
             new(5, @"(%)", (v, sl, sc, el, ec) => new ModOperator(v, sl, sc, el, ec)),
+            new(5, @"(\|)", (v, sl, sc, el, ec) => new OrOperator(v, sl, sc, el, ec)),
+            new(5, @"(&)", (v, sl, sc, el, ec) => new AndOperator(v, sl, sc, el, ec)),
 
             new(7, @"(=)", (v, sl, sc, el, ec) => new AssignmentOperator(v, sl, sc, el, ec)),
 
@@ -58,9 +60,7 @@ namespace Compiler
             new(30, @"(<)", (v, sl, sc, el, ec) => new OpenAngleBracket(v, sl, sc, el, ec)),
             new(30, @"(>)", (v, sl, sc, el, ec) => new CloseAngleBracket(v, sl, sc, el, ec)),
 
-            new(40, @"\b([a-zA-Z_][a-zA-Z0-9_]*)\b", (v, sl, sc, el, ec) => new IdentifierName(v, sl, sc, el, ec)),
-
-            new(uint.MaxValue, @"(.)", (v, sl, sc, el, ec) => new Undefined(v, sl, sc, el, ec))
+            new(40, @"\b([a-zA-Z_][a-zA-Z0-9_]*)\b", (v, sl, sc, el, ec) => new IdentifierName(v, sl, sc, el, ec))
         ];
 
         public List<LeafNode> TokenizeFile(string filePath, ILexer.OnUnexpectedTokenHandler? onUnexpectedToken = null)
@@ -87,16 +87,18 @@ namespace Compiler
             if (missing.Any()) throw new InvalidOperationException($"Some token types are missing definitions: {string.Join(", ", missing)}");
 #endif
 
+            StringBuilder errorMessageBuilder = new("Unexpected characters found!\n");
+            bool errorFlag = false;
             List<LeafNode> tokens = [];
             StringBuilder line = new();
 
-            for (uint lineIdx = 0; lineIdx < lines.Length; lineIdx++)
+            for (int lineIdx = 0; lineIdx < lines.Length; lineIdx++)
             {
                 line.Clear();
                 line.Append(lines[lineIdx]);
                 line.Append('\n');
 
-                uint charIdx = 0;
+                int charIdx = 0;
 
                 while (charIdx < line.Length)
                 {
@@ -105,7 +107,7 @@ namespace Compiler
 
                     foreach (var def in orderedDefinitions)
                     {
-                        match = def.Regex.Match(line.ToString(), (int)charIdx);
+                        match = def.Regex.Match(line.ToString(), charIdx);
 
                         if (!match.Success || match.Index != charIdx) continue;
 
@@ -113,21 +115,29 @@ namespace Compiler
                         break;
                     }
 
+                    if (onUnexpectedToken != null && !match.Success)
+                    {
+                        errorFlag = true;
+                        onUnexpectedToken(lineIdx, charIdx, match.Value);
+                        errorMessageBuilder.Append($"Line {lineIdx}\t'{line[charIdx]}'\n");
+                    }
+
                     LeafNode node = matchedDef!.NodeFactory.Invoke(
                         value: match.Value,
                         startLine: lineIdx,
-                        startChar: (uint)(charIdx + match.Index),
+                        startChar: charIdx + match.Index,
                         endLine: lineIdx,
-                        endChar: (uint)(charIdx + match.Index + match.Length));
-
-                    if (onUnexpectedToken != null && node is Undefined)
-                    {
-                        onUnexpectedToken(lineIdx, charIdx, match.Value);
-                    }
+                        endChar: charIdx + match.Index + match.Length);
+                    
                     tokens.Add(node);
 
-                    charIdx += (uint)match.Length;
+                    charIdx += match.Length;
                 }
+            }
+
+            if (errorFlag)
+            {
+                throw new ArgumentException(errorMessageBuilder.ToString());
             }
 
             return tokens;

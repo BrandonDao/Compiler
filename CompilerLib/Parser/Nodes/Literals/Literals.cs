@@ -1,13 +1,19 @@
 namespace CompilerLib.Parser.Nodes.Literals
 {
-    public abstract class Literal(string value, uint startLine, uint startChar, uint endLine, uint endChar)
+    public abstract class Literal(string value, int startLine, int startChar, int endLine, int endChar)
         : LeafNode(value, startLine, startChar, endLine, endChar);
 
 
 
-    public class IntLiteral(string value, uint startLine, uint startChar, uint endLine, uint endChar)
-        : Literal(value, startLine, startChar, endLine, endChar);
-    
-    public class BoolLiteral(string value, uint startLine, uint startChar, uint endLine, uint endChar)
-        : Literal(value, startLine, startChar, endLine, endChar);
+    public class IntLiteral(string value, int startLine, int startChar, int endLine, int endChar)
+        : Literal(value, startLine, startChar, endLine, endChar)
+    {
+        public override string GrammarIdentifier => "LiteralInt";
+    }
+
+    public class BoolLiteral(string value, int startLine, int startChar, int endLine, int endChar)
+        : Literal(value, startLine, startChar, endLine, endChar)
+    {
+        public override string GrammarIdentifier => "LiteralBool";
+    }
 }

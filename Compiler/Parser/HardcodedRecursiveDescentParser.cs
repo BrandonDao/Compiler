@@ -23,7 +23,7 @@
 //     {
 //         private readonly Token[] tokens;
 //         private readonly Grammar grammar;
-//         private uint position = 0;
+//         private int position = 0;
 //         private readonly Dictionary<string, Func<SyntaxNode>> ruleParsers;
 
 //         public RecursiveDescentParser(Token[] tokens, Grammar grammar)
@@ -294,7 +294,7 @@
 // #endif
 //         }
 
-//         private uint ParseWhitespace(List<SyntaxNode> children, bool isLeading)
+//         private int ParseWhitespace(List<SyntaxNode> children, bool isLeading)
 //         {
 //             if (Match(TokenType.Whitespace, out Token? token))
 //             {

@@ -1,13 +1,28 @@
 namespace CompilerLib.Parser.Nodes.Operators
 {
-    public class AddOperator(string value, uint startLine, uint startChar, uint endLine, uint endChar)
-        : Operator(value, startLine, startChar, endLine, endChar);
-    public class NegateOperator(string value, uint startLine, uint startChar, uint endLine, uint endChar)
-        : Operator(value, startLine, startChar, endLine, endChar);
-    public class MultiplyOperator(string value, uint startLine, uint startChar, uint endLine, uint endChar)
-        : Operator(value, startLine, startChar, endLine, endChar);
-    public class DivideOperator(string value, uint startLine, uint startChar, uint endLine, uint endChar)
-        : Operator(value, startLine, startChar, endLine, endChar);
-    public class ModOperator(string value, uint startLine, uint startChar, uint endLine, uint endChar)
-        : Operator(value, startLine, startChar, endLine, endChar);
+    public class AddOperator(string value, int startLine, int startChar, int endLine, int endChar)
+        : Operator(value, startLine, startChar, endLine, endChar)
+    {
+        public override string GrammarIdentifier => "OpAdd";
+    }
+    public class NegateOperator(string value, int startLine, int startChar, int endLine, int endChar)
+        : Operator(value, startLine, startChar, endLine, endChar)
+    {
+        public override string GrammarIdentifier => "OpNegate";
+    }
+    public class MultiplyOperator(string value, int startLine, int startChar, int endLine, int endChar)
+        : Operator(value, startLine, startChar, endLine, endChar)
+    {
+        public override string GrammarIdentifier => "OpMultiply";
+    }
+    public class DivideOperator(string value, int startLine, int startChar, int endLine, int endChar)
+        : Operator(value, startLine, startChar, endLine, endChar)
+    {
+        public override string GrammarIdentifier => "OpDivide";
+    }
+    public class ModOperator(string value, int startLine, int startChar, int endLine, int endChar)
+        : Operator(value, startLine, startChar, endLine, endChar)
+    {
+        public override string GrammarIdentifier => "OpMod";
+    }
 }

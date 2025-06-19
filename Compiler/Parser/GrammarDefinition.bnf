@@ -1,30 +1,51 @@
 # Grammar Definition
-# Terminals are either literal strings (in quotes) or regex (REGEX ...)
-# Use the special keyword "empty" to indicate an empty/epsilon rule
+# Use the special keyword "EMPTY" to indicate an EMPTY/epsilon rule
 # Comments start with "#" and cannot go on the same line as a rule
+# Terminals are prefixed with _. Here is a full list of supported terminals:
+# _Int8
+# _Int16
+# _Int32
+# _Int64
+# _Bool
+# _OpEquality
+# _OpOr
+# _OpAnd
+# _OpNegate
+# _OpAdd
+# _OpMultiply
+# _OpDivide
+# _OpMod
+# _OpAssign
+# _LiteralInt
+# _LiteralBool
+# _Whitespace
+# _Semicolon
+# _Comma
+# _OpenBrace
+# _CloseBrace
+# _OpenParen
+# _CloseParen
+# _OpenSquareBracket
+# _CloseSquareBracket
+# _OpenAngleBracket
+# _CloseAngleBracket
+# _Id
 
-# must be the first line
-entrypoint: Program;
+# Must exist in the file somewhere
+ENTRYPOINT: Program;
 
-# --- Terminals ---
-id              : REGEX [A-Za-z][A-Za-z0-9]*;
-intLiteral      : REGEX [0-9]+;
-boolLiteral     : "true" | "false";
-
-# --- Nonterminals ---
+PrimitiveType   : _Int8 | _Int16 | _Int32 | _Int32 | _Int64 | _Bool;
 
 # Top-level structure
 Program         : TopLevelList;
 TopLevelList    : TopLevel TopLevelList
-                | empty
+                | EMPTY
                 ;
 TopLevel        : VarDefStatement
                 ;
 
 # Types
-Type            : primitiveType | id;
-ReturnType      : "void" | Type;
-primitiveType   : "int8" | "int16" | "int32" | "int64" | "bool";
+Type            : PrimitiveType | _Id;
 
 # Expressions
 Expr            : BoolExpr
@@ -32,45 +53,50 @@ Expr            : BoolExpr
                 ;
 BoolExpr        : EqualityExpr BoolExprRest
                 ;
-EqualityExpr    : ValueExpr "==" ValueExpr
+EqualityExpr    : ValueExpr _OpEquality ValueExpr
                 | ValueExpr
                 ;
-BoolExprRest    : "|" BoolTerm BoolExprRest
-                | empty
+BoolExprRest    : _OpOr BoolTerm BoolExprRest
+                | EMPTY
                 ;
 ValueExpr       : IntExpr
                 | BoolTerm
-                | "(" BoolExpr ")"
+                | _OpenParen BoolExpr _CloseParen
                 ;
 BoolTerm        : BoolFactor BoolTermRest ;
-BoolTermRest    : "&" BoolFactor BoolTermRest
-                | empty
+BoolTermRest    : _OpAnd BoolFactor BoolTermRest
+                | EMPTY
                 ;
-BoolFactor      : "(" BoolExpr ")"
-                | boolLiteral
-                | IntExpr "<" IntExpr
-                | IntExpr ">" IntExpr
-                | IntExpr "<=" IntExpr
-                | IntExpr ">=" IntExpr
-                | FunctionCall
-                | id
+BoolFactor      : _OpenParen BoolExpr _CloseParen
+                | _LiteralBool
+#                | IntExpr "<" IntExpr
+#                | IntExpr ">" IntExpr
+#                | IntExpr "<=" IntExpr
+#                | IntExpr ">=" IntExpr
+                | _Id
                 ;
 IntExpr         : IntSecondary IntExprRest ;
-IntLowOp        : "+" | "-";
+IntLowOp        : _OpAdd | _OpNegate;
 IntExprRest     : IntLowOp IntSecondary IntExprRest
-                | empty
+                | EMPTY
                 ;
 IntSecondary    : IntBase IntSecondaryRest ;
-IntHighOp       : "*" | "/" | "%";
+IntHighOp       : _OpMultiply | _OpDivide | _OpMod;
 IntSecondaryRest: IntHighOp IntBase IntSecondaryRest
-                | empty
+                | EMPTY
                 ;
-IntBase         : "(" IntExpr ")"
-                | intLiteral
-                | FunctionCall
-                | id
+IntBase         : _OpenParen IntExpr _CloseParen
+                | _LiteralInt
+                | _Id
                 ;
 
+#FIRST(IntExpr):             { _OpenParen, _LiteralInt, _Id }
+#FIRST(IntLowOp):            { _OpAdd, _OpNegate }
+#FIRST(IntExprRest):         { _OpAdd, _OpNegate }
+#FIRST(IntSecondary):        { _OpenParen, _LiteralInt, _Id }
+#FIRST(IntHighOp):           { _OpMultiply, _OpDivide, _OpMod }
+#FIRST(IntSecondaryRest):    { _OpMultiply, _OpDivide, _OpMod }
+#FIRST(IntBase):             { _OpenParen, _LiteralInt, _Id }
 
 # --- Variables ---
-VarDefStatement     : Type id "=" Expr ";" ;
+VarDefStatement     : Type _Id _OpAssign Expr _Semicolon ;
