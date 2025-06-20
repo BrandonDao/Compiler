@@ -1,17 +1,10 @@
 using System.Text.RegularExpressions;
 using System.Reflection;
 using CompilerLib.Lexer;
-using CompilerLib.Parser.Nodes.Primitives;
-using CompilerLib.Parser.Nodes.Operators;
-using CompilerLib.Parser.Nodes.Literals;
-using CompilerLib.Parser.Nodes.Punctuation;
-using CompilerLib.Parser.Nodes.Identifiers;
-using Bool = CompilerLib.Parser.Nodes.Primitives.Bool;
-using Int16 = CompilerLib.Parser.Nodes.Primitives.Int16;
-using Int32 = CompilerLib.Parser.Nodes.Primitives.Int32;
-using Int64 = CompilerLib.Parser.Nodes.Primitives.Int64;
 using CompilerLib.Parser.Nodes;
 using System.Text;
+using CompilerLib.Parser.Nodes.Operators;
+using CompilerLib.Parser.Nodes.Punctuation;
 
 namespace Compiler
 {
@@ -19,34 +12,39 @@ namespace Compiler
     {
         private static readonly TokenDefinition[] tokenDefinitions =
         [
-            new(00, @"\b(int8)\b", (v, sl, sc, el, ec) => new Int8(v, sl, sc, el, ec)),
-            new(00, @"\b(int16)\b", (v, sl, sc, el, ec) => new Int16(v, sl, sc, el, ec)),
-            new(00, @"\b(int32)\b", (v, sl, sc, el, ec) => new Int32(v, sl, sc, el, ec)),
-            new(00, @"\b(int64)\b", (v, sl, sc, el, ec) => new Int64(v, sl, sc, el, ec)),
-            new(00, @"\b(bool)\b", (v, sl, sc, el, ec) => new Bool(v, sl, sc, el, ec)),
-            new(05, @"(==)", (v, sl, sc, el, ec) => new EqualityOperator(v, sl, sc, el, ec)),
-            new(05, @"(-)", (v, sl, sc, el, ec) => new NegateOperator(v, sl, sc, el, ec)),
-            new(05, @"(\+)", (v, sl, sc, el, ec) => new AddOperator(v, sl, sc, el, ec)),
-            new(05, @"(\*)", (v, sl, sc, el, ec) => new MultiplyOperator(v, sl, sc, el, ec)),
-            new(05, @"(/)", (v, sl, sc, el, ec) => new DivideOperator(v, sl, sc, el, ec)),
-            new(05, @"(%)", (v, sl, sc, el, ec) => new ModOperator(v, sl, sc, el, ec)),
-            new(05, @"(\|)", (v, sl, sc, el, ec) => new OrOperator(v, sl, sc, el, ec)),
-            new(05, @"(&)", (v, sl, sc, el, ec) => new AndOperator(v, sl, sc, el, ec)),
-            new(07, @"(=)", (v, sl, sc, el, ec) => new AssignmentOperator(v, sl, sc, el, ec)),
-            new(15, @"\b(\d+)\b", (v, sl, sc, el, ec) => new IntLiteralToken(v, sl, sc, el, ec)),
-            new(15, @"\b(true|false)\b", (v, sl, sc, el, ec) => new BoolLiteral(v, sl, sc, el, ec)),
-            new(30, @"(\s+)", (v, sl, sc, el, ec) => new Whitespace(v, sl, sc, el, ec)), // Always has priority of 30...
-            new(40, @"(;)", (v, sl, sc, el, ec) => new Semicolon(v, sl, sc, el, ec)),
-            new(40, @"(,)", (v, sl, sc, el, ec) => new Comma(v, sl, sc, el, ec)),
-            new(40, @"(\{)", (v, sl, sc, el, ec) => new OpenBrace(v, sl, sc, el, ec)),
-            new(40, @"(\})", (v, sl, sc, el, ec) => new CloseBrace(v, sl, sc, el, ec)),
-            new(40, @"(\()", (v, sl, sc, el, ec) => new OpenParenthesis(v, sl, sc, el, ec)),
-            new(40, @"(\))", (v, sl, sc, el, ec) => new CloseParenthesis(v, sl, sc, el, ec)),
-            new(40, @"(\[)", (v, sl, sc, el, ec) => new OpenSquareBracket(v, sl, sc, el, ec)),
-            new(40, @"(\])", (v, sl, sc, el, ec) => new CloseSquareBracket(v, sl, sc, el, ec)),
-            new(40, @"(<)", (v, sl, sc, el, ec) => new OpenAngleBracket(v, sl, sc, el, ec)),
-            new(40, @"(>)", (v, sl, sc, el, ec) => new CloseAngleBracket(v, sl, sc, el, ec)),
-            new(50, @"\b([a-zA-Z_][a-zA-Z0-9_]*)\b", (v, sl, sc, el, ec) => new IdentifierToken(v, sl, sc, el, ec))
+            new(LexPriority.Primitive, @"\b(int8)\b", (v, sl, sc, el, ec) => new Int8Leaf(v, sl, sc, el, ec)),
+            new(LexPriority.Primitive, @"\b(int16)\b", (v, sl, sc, el, ec) => new Int16Leaf(v, sl, sc, el, ec)),
+            new(LexPriority.Primitive, @"\b(int32)\b", (v, sl, sc, el, ec) => new Int32Leaf(v, sl, sc, el, ec)),
+            new(LexPriority.Primitive, @"\b(int64)\b", (v, sl, sc, el, ec) => new Int64Leaf(v, sl, sc, el, ec)),
+            new(LexPriority.Primitive, @"\b(bool)\b", (v, sl, sc, el, ec) => new BoolLeaf(v, sl, sc, el, ec)),
+
+            new(LexPriority.PrimaryOperator, @"(==)", (v, sl, sc, el, ec) => new EqualityOperatorLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.PrimaryOperator, @"(-)", (v, sl, sc, el, ec) => new NegateOperatorLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.PrimaryOperator, @"(\+)", (v, sl, sc, el, ec) => new AddOperatorLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.PrimaryOperator, @"(\*)", (v, sl, sc, el, ec) => new MultiplyOperatorLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.PrimaryOperator, @"(/)", (v, sl, sc, el, ec) => new DivideOperatorLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.PrimaryOperator, @"(%)", (v, sl, sc, el, ec) => new ModOperatorLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.PrimaryOperator, @"(\|)", (v, sl, sc, el, ec) => new OrOperatorLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.PrimaryOperator, @"(&)", (v, sl, sc, el, ec) => new AndOperatorLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.SecondaryOperator, @"(=)", (v, sl, sc, el, ec) => new AssignmentOperatorLeaf(v, sl, sc, el, ec)),
+
+            new(LexPriority.Literal, @"\b(\d+)\b", (v, sl, sc, el, ec) => new IntLiteralLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.Literal, @"\b(true|false)\b", (v, sl, sc, el, ec) => new BoolLiteralLeaf(v, sl, sc, el, ec)),
+
+            new(LexPriority.Whitespace  , @"(\s+)", (v, sl, sc, el, ec) => new WhitespaceLeaf(v, sl, sc, el, ec)),
+
+            new(LexPriority.Punctuation, @"(;)", (v, sl, sc, el, ec) => new SemicolonLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.Punctuation, @"(,)", (v, sl, sc, el, ec) => new CommaLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.Punctuation, @"(\{)", (v, sl, sc, el, ec) => new OpenBraceLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.Punctuation, @"(\})", (v, sl, sc, el, ec) => new CloseBraceLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.Punctuation, @"(\()", (v, sl, sc, el, ec) => new OpenParenthesisLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.Punctuation, @"(\))", (v, sl, sc, el, ec) => new CloseParenthesisLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.Punctuation, @"(\[)", (v, sl, sc, el, ec) => new OpenSquareBracketLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.Punctuation, @"(\])", (v, sl, sc, el, ec) => new CloseSquareBracketLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.Punctuation, @"(<)", (v, sl, sc, el, ec) => new OpenAngleBracketLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.Punctuation, @"(>)", (v, sl, sc, el, ec) => new CloseAngleBracketLeaf(v, sl, sc, el, ec)),
+
+            new(LexPriority.Identifier, @"\b([a-zA-Z_][a-zA-Z0-9_]*)\b", (v, sl, sc, el, ec) => new IdentifierLeaf(v, sl, sc, el, ec))
         ];
 
         public List<LeafNode> TokenizeFile(string filePath, ILexer.OnUnexpectedTokenHandler? onUnexpectedToken = null)
@@ -106,7 +104,7 @@ namespace Compiler
                     int startLine = lineIdx;
                     int startChar = relativeCharIdx;
 
-                    if (matchedDef!.Priority == 30) // Whitespace
+                    if (matchedDef!.Priority == LexPriority.Whitespace) // Whitespace
                     {
                         lineIdx += match.Value.Count(c => c == '\n');
                         relativeCharIdx = 0;

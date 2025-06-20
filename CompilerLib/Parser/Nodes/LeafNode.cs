@@ -45,7 +45,7 @@ namespace CompilerLib.Parser.Nodes
         {
             if (Children.Count == 1)
             {
-                if (((Whitespace)Children[0]).IsLeading)
+                if (((WhitespaceLeaf)Children[0]).IsLeading)
                 {
                     Children[0].FlattenBackToInput(builder);
                     builder.Append(Value);

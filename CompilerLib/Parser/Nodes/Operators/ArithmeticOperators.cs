@@ -1,26 +1,26 @@
 namespace CompilerLib.Parser.Nodes.Operators
 {
-    public class AddOperator(string value, int startLine, int startChar, int endLine, int endChar)
+    public class AddOperatorLeaf(string value, int startLine, int startChar, int endLine, int endChar)
         : OperatorLeaf(value, startLine, startChar, endLine, endChar)
     {
         public override string GrammarIdentifier => "OpAdd";
     }
-    public class NegateOperator(string value, int startLine, int startChar, int endLine, int endChar)
+    public class NegateOperatorLeaf(string value, int startLine, int startChar, int endLine, int endChar)
         : OperatorLeaf(value, startLine, startChar, endLine, endChar)
     {
         public override string GrammarIdentifier => "OpNegate";
     }
-    public class MultiplyOperator(string value, int startLine, int startChar, int endLine, int endChar)
+    public class MultiplyOperatorLeaf(string value, int startLine, int startChar, int endLine, int endChar)
         : OperatorLeaf(value, startLine, startChar, endLine, endChar)
     {
         public override string GrammarIdentifier => "OpMultiply";
     }
-    public class DivideOperator(string value, int startLine, int startChar, int endLine, int endChar)
+    public class DivideOperatorLeaf(string value, int startLine, int startChar, int endLine, int endChar)
         : OperatorLeaf(value, startLine, startChar, endLine, endChar)
     {
         public override string GrammarIdentifier => "OpDivide";
     }
-    public class ModOperator(string value, int startLine, int startChar, int endLine, int endChar)
+    public class ModOperatorLeaf(string value, int startLine, int startChar, int endLine, int endChar)
         : OperatorLeaf(value, startLine, startChar, endLine, endChar)
     {
         public override string GrammarIdentifier => "OpMod";
