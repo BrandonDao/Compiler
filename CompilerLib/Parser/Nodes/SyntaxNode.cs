@@ -1,12 +1,23 @@
+using System.Text;
+
 namespace CompilerLib.Parser.Nodes
 {
-    public abstract class SyntaxNode(int startLine, int startChar, int endLine, int endChar, List<SyntaxNode> children)
+    public abstract class SyntaxNode
     {
-        public List<SyntaxNode> Children { get; } = children;
-        public int StartLine { get; set; } = startLine;
-        public int StartChar { get; set; } = startChar;
-        public int EndLine { get; set; } = endLine;
-        public int EndChar { get; set; } = endChar;
+        public List<SyntaxNode> Children { get; }
+        public int StartLine { get; set; }
+        public int StartChar { get; set; }
+        public int EndLine { get; set; }
+        public int EndChar { get; set; }
+
+        private SyntaxNode(int startLine, int startChar, int endLine, int endChar, List<SyntaxNode> children)
+        {
+            Children = children;
+            StartLine = startLine;
+            StartChar = startChar;
+            EndLine = endLine;
+            EndChar = endChar;
+        }
 
         public SyntaxNode(List<SyntaxNode> children)
             : this(0, 0, 0, 0, children) { }
@@ -27,12 +38,19 @@ namespace CompilerLib.Parser.Nodes
         public virtual string GetPrintable(int indent = 0)
         {
             var indentString = new string(' ', indent);
-            var result = $"{indentString}{GetType().Name} [{StartLine}.{StartChar} - {EndLine}.{EndChar}]\n";
+            var result = $"[{StartLine}.{StartChar} - {EndLine}.{EndChar}]\t{indentString}{GetType().Name}\n";
             foreach (var child in Children)
             {
                 result += child.GetPrintable(indent + 4);
             }
             return result;
+        }
+        public virtual void FlattenBackToInput(StringBuilder builder)
+        {
+            foreach (var child in Children)
+            {
+                child.FlattenBackToInput(builder);
+            }
         }
     }
 }

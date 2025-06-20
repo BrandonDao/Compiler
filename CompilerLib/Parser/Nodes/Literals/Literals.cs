@@ -5,7 +5,7 @@ namespace CompilerLib.Parser.Nodes.Literals
 
 
 
-    public class IntLiteral(string value, int startLine, int startChar, int endLine, int endChar)
+    public class IntLiteralToken(string value, int startLine, int startChar, int endLine, int endChar)
         : Literal(value, startLine, startChar, endLine, endChar)
     {
         public override string GrammarIdentifier => "LiteralInt";

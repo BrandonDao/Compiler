@@ -19,57 +19,43 @@ namespace Compiler
     {
         private static readonly TokenDefinition[] tokenDefinitions =
         [
-            new(0, @"\b(int8)\b", (v, sl, sc, el, ec) => new Int8(v, sl, sc, el, ec)),
-            new(0, @"\b(int16)\b", (v, sl, sc, el, ec) => new Int16(v, sl, sc, el, ec)),
-            new(0, @"\b(int32)\b", (v, sl, sc, el, ec) => new Int32(v, sl, sc, el, ec)),
-            new(0, @"\b(int64)\b", (v, sl, sc, el, ec) => new Int64(v, sl, sc, el, ec)),
-            new(0, @"\b(bool)\b", (v, sl, sc, el, ec) => new Bool(v, sl, sc, el, ec)),
-
-            new(5, @"(==)", (v, sl, sc, el, ec) => new EqualityOperator(v, sl, sc, el, ec)),
-            // new(5, TokenType.DotOperator, @"(\.)"),
-            // new(5, TokenType.ModulusOperator, @"(%)"),
-            new(5, @"(-)", (v, sl, sc, el, ec) => new NegateOperator(v, sl, sc, el, ec)),
-            new(5, @"(\+)", (v, sl, sc, el, ec) => new AddOperator(v, sl, sc, el, ec)),
-            new(5, @"(\*)", (v, sl, sc, el, ec) => new MultiplyOperator(v, sl, sc, el, ec)),
-            new(5, @"(/)", (v, sl, sc, el, ec) => new DivideOperator(v, sl, sc, el, ec)),
-            new(5, @"(%)", (v, sl, sc, el, ec) => new ModOperator(v, sl, sc, el, ec)),
-            new(5, @"(\|)", (v, sl, sc, el, ec) => new OrOperator(v, sl, sc, el, ec)),
-            new(5, @"(&)", (v, sl, sc, el, ec) => new AndOperator(v, sl, sc, el, ec)),
-
-            new(7, @"(=)", (v, sl, sc, el, ec) => new AssignmentOperator(v, sl, sc, el, ec)),
-
-            // new(10, TokenType.Alias, @"\b(alias)\b"),
-            // new(10, TokenType.While, @"\b(while)\b"),
-            // new(10, TokenType.Func, @"\b(func)\b"),
-            // new(10, TokenType.Void, @"\b(void)\b"),
-            // new(10, TokenType.Return, @"\b(return)\b"),
-            // new(10, TokenType.IfStatement, @"\b(if)\b"),
-            // new(10, TokenType.ElseStatement, @"\b(else)\b"),
-            new(15, @"\b(\d+)\b", (v, sl, sc, el, ec) => new IntLiteral(v, sl, sc, el, ec)),
+            new(00, @"\b(int8)\b", (v, sl, sc, el, ec) => new Int8(v, sl, sc, el, ec)),
+            new(00, @"\b(int16)\b", (v, sl, sc, el, ec) => new Int16(v, sl, sc, el, ec)),
+            new(00, @"\b(int32)\b", (v, sl, sc, el, ec) => new Int32(v, sl, sc, el, ec)),
+            new(00, @"\b(int64)\b", (v, sl, sc, el, ec) => new Int64(v, sl, sc, el, ec)),
+            new(00, @"\b(bool)\b", (v, sl, sc, el, ec) => new Bool(v, sl, sc, el, ec)),
+            new(05, @"(==)", (v, sl, sc, el, ec) => new EqualityOperator(v, sl, sc, el, ec)),
+            new(05, @"(-)", (v, sl, sc, el, ec) => new NegateOperator(v, sl, sc, el, ec)),
+            new(05, @"(\+)", (v, sl, sc, el, ec) => new AddOperator(v, sl, sc, el, ec)),
+            new(05, @"(\*)", (v, sl, sc, el, ec) => new MultiplyOperator(v, sl, sc, el, ec)),
+            new(05, @"(/)", (v, sl, sc, el, ec) => new DivideOperator(v, sl, sc, el, ec)),
+            new(05, @"(%)", (v, sl, sc, el, ec) => new ModOperator(v, sl, sc, el, ec)),
+            new(05, @"(\|)", (v, sl, sc, el, ec) => new OrOperator(v, sl, sc, el, ec)),
+            new(05, @"(&)", (v, sl, sc, el, ec) => new AndOperator(v, sl, sc, el, ec)),
+            new(07, @"(=)", (v, sl, sc, el, ec) => new AssignmentOperator(v, sl, sc, el, ec)),
+            new(15, @"\b(\d+)\b", (v, sl, sc, el, ec) => new IntLiteralToken(v, sl, sc, el, ec)),
             new(15, @"\b(true|false)\b", (v, sl, sc, el, ec) => new BoolLiteral(v, sl, sc, el, ec)),
-
-            new(30, @"([ \t\r\n]+)", (v, sl, sc, el, ec) => new Whitespace(v, sl, sc, el, ec)),
-            new(30, @"(;)", (v, sl, sc, el, ec) => new Semicolon(v, sl, sc, el, ec)),
-            new(30, @"(,)", (v, sl, sc, el, ec) => new Comma(v, sl, sc, el, ec)),
-            new(30, @"(\{)", (v, sl, sc, el, ec) => new OpenBrace(v, sl, sc, el, ec)),
-            new(30, @"(\})", (v, sl, sc, el, ec) => new CloseBrace(v, sl, sc, el, ec)),
-            new(30, @"(\()", (v, sl, sc, el, ec) => new OpenParenthesis(v, sl, sc, el, ec)),
-            new(30, @"(\))", (v, sl, sc, el, ec) => new CloseParenthesis(v, sl, sc, el, ec)),
-            new(30, @"(\[)", (v, sl, sc, el, ec) => new OpenSquareBracket(v, sl, sc, el, ec)),
-            new(30, @"(\])", (v, sl, sc, el, ec) => new CloseSquareBracket(v, sl, sc, el, ec)),
-            new(30, @"(<)", (v, sl, sc, el, ec) => new OpenAngleBracket(v, sl, sc, el, ec)),
-            new(30, @"(>)", (v, sl, sc, el, ec) => new CloseAngleBracket(v, sl, sc, el, ec)),
-
-            new(40, @"\b([a-zA-Z_][a-zA-Z0-9_]*)\b", (v, sl, sc, el, ec) => new IdentifierName(v, sl, sc, el, ec))
+            new(30, @"(\s+)", (v, sl, sc, el, ec) => new Whitespace(v, sl, sc, el, ec)), // Always has priority of 30...
+            new(40, @"(;)", (v, sl, sc, el, ec) => new Semicolon(v, sl, sc, el, ec)),
+            new(40, @"(,)", (v, sl, sc, el, ec) => new Comma(v, sl, sc, el, ec)),
+            new(40, @"(\{)", (v, sl, sc, el, ec) => new OpenBrace(v, sl, sc, el, ec)),
+            new(40, @"(\})", (v, sl, sc, el, ec) => new CloseBrace(v, sl, sc, el, ec)),
+            new(40, @"(\()", (v, sl, sc, el, ec) => new OpenParenthesis(v, sl, sc, el, ec)),
+            new(40, @"(\))", (v, sl, sc, el, ec) => new CloseParenthesis(v, sl, sc, el, ec)),
+            new(40, @"(\[)", (v, sl, sc, el, ec) => new OpenSquareBracket(v, sl, sc, el, ec)),
+            new(40, @"(\])", (v, sl, sc, el, ec) => new CloseSquareBracket(v, sl, sc, el, ec)),
+            new(40, @"(<)", (v, sl, sc, el, ec) => new OpenAngleBracket(v, sl, sc, el, ec)),
+            new(40, @"(>)", (v, sl, sc, el, ec) => new CloseAngleBracket(v, sl, sc, el, ec)),
+            new(50, @"\b([a-zA-Z_][a-zA-Z0-9_]*)\b", (v, sl, sc, el, ec) => new IdentifierToken(v, sl, sc, el, ec))
         ];
 
         public List<LeafNode> TokenizeFile(string filePath, ILexer.OnUnexpectedTokenHandler? onUnexpectedToken = null)
         {
-            string[] lines = File.ReadAllLines(filePath);
-            return Tokenize(lines, onUnexpectedToken);
+            string text = File.ReadAllText(filePath);
+            return Tokenize(text, onUnexpectedToken);
         }
 
-        public List<LeafNode> Tokenize(string[] lines, ILexer.OnUnexpectedTokenHandler? onUnexpectedToken = null)
+        public List<LeafNode> Tokenize(string text, ILexer.OnUnexpectedTokenHandler? onUnexpectedToken = null)
         {
             var orderedDefinitions = tokenDefinitions.OrderBy(d => d.Priority);
 #if DEBUG
@@ -90,55 +76,57 @@ namespace Compiler
             StringBuilder errorMessageBuilder = new("Unexpected characters found!\n");
             bool errorFlag = false;
             List<LeafNode> tokens = [];
-            StringBuilder line = new();
 
-            for (int lineIdx = 0; lineIdx < lines.Length; lineIdx++)
+            int lineIdx = 0;
+            int relativeCharIdx = 0;
+
+            for (int textIdx = 0; textIdx < text.Length;)
             {
-                line.Clear();
-                line.Append(lines[lineIdx]);
-                line.Append('\n');
+                TokenDefinition? matchedDef = null;
+                Match match = Match.Empty;
 
-                int charIdx = 0;
-
-                while (charIdx < line.Length)
+                foreach (var def in orderedDefinitions)
                 {
-                    TokenDefinition? matchedDef = null;
-                    Match match = Match.Empty;
+                    match = def.Regex.Match(text, textIdx);
 
-                    foreach (var def in orderedDefinitions)
+                    if (!match.Success || match.Index != textIdx) continue;
+
+                    matchedDef = def;
+                    break;
+                }
+
+                if (onUnexpectedToken != null && !match.Success)
+                {
+                    errorFlag = true;
+                    onUnexpectedToken(lineIdx, relativeCharIdx, match.Value);
+                    errorMessageBuilder.Append($"Line {lineIdx}\t'{text[textIdx]}'\n");
+                }
+                else
+                {
+                    int startLine = lineIdx;
+                    int startChar = relativeCharIdx;
+
+                    if (matchedDef!.Priority == 30) // Whitespace
                     {
-                        match = def.Regex.Match(line.ToString(), charIdx);
-
-                        if (!match.Success || match.Index != charIdx) continue;
-
-                        matchedDef = def;
-                        break;
-                    }
-
-                    if (onUnexpectedToken != null && !match.Success)
-                    {
-                        errorFlag = true;
-                        onUnexpectedToken(lineIdx, charIdx, match.Value);
-                        errorMessageBuilder.Append($"Line {lineIdx}\t'{line[charIdx]}'\n");
+                        lineIdx += match.Value.Count(c => c == '\n');
+                        relativeCharIdx = 0;
                     }
 
                     LeafNode node = matchedDef!.NodeFactory.Invoke(
                         value: match.Value,
-                        startLine: lineIdx,
-                        startChar: charIdx + match.Index,
+                        startLine: startLine,
+                        startChar: startChar,
                         endLine: lineIdx,
-                        endChar: charIdx + match.Index + match.Length);
-                    
+                        endChar: relativeCharIdx + match.Length);
+
                     tokens.Add(node);
-
-                    charIdx += match.Length;
                 }
+
+                relativeCharIdx += match.Length;
+                textIdx += match.Length;
             }
 
-            if (errorFlag)
-            {
-                throw new ArgumentException(errorMessageBuilder.ToString());
-            }
+            if (errorFlag) throw new ArgumentException(errorMessageBuilder.ToString());
 
             return tokens;
         }

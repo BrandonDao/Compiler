@@ -1,5 +1,7 @@
 
 using System.Diagnostics;
+using System.Text;
+using CompilerLib.Parser.Nodes.Punctuation;
 
 namespace CompilerLib.Parser.Nodes
 {
@@ -31,12 +33,39 @@ namespace CompilerLib.Parser.Nodes
         public override string GetPrintable(int indent = 0)
         {
             var indentString = new string(' ', indent);
-            var result = $"{indentString}{GetType().Name} [{StartLine}.{StartChar} - {EndLine}.{EndChar}] Token: {Value}\n";
+            var result = $"[{StartLine}.{StartChar} - {EndLine}.{EndChar}]\t{indentString}{GetType().Name} Token: {Value}\n";
             foreach (var child in Children)
             {
                 result += child.GetPrintable(indent + 4);
             }
             return result;
+        }
+
+        public override void FlattenBackToInput(StringBuilder builder)
+        {
+            if (Children.Count == 1)
+            {
+                if (((Whitespace)Children[0]).IsLeading)
+                {
+                    Children[0].FlattenBackToInput(builder);
+                    builder.Append(Value);
+                }
+                else
+                {
+                    builder.Append(Value);
+                    Children[0].FlattenBackToInput(builder);
+                }
+            }
+            else if (Children.Count == 0)
+            {
+                builder.Append(Value);
+            }
+            else
+            {
+                Children[0].FlattenBackToInput(builder);
+                builder.Append(Value);
+                Children[1].FlattenBackToInput(builder);
+            }
         }
     }
 }

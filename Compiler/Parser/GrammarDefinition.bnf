@@ -75,28 +75,14 @@ BoolFactor      : _OpenParen BoolExpr _CloseParen
 #                | IntExpr ">=" IntExpr
                 | _Id
                 ;
-IntExpr         : IntSecondary IntExprRest ;
-IntLowOp        : _OpAdd | _OpNegate;
-IntExprRest     : IntLowOp IntSecondary IntExprRest
-                | EMPTY
-                ;
-IntSecondary    : IntBase IntSecondaryRest ;
-IntHighOp       : _OpMultiply | _OpDivide | _OpMod;
-IntSecondaryRest: IntHighOp IntBase IntSecondaryRest
-                | EMPTY
-                ;
-IntBase         : _OpenParen IntExpr _CloseParen
+IntExpr         : MulDiv AddSubRest;
+AddSubRest      : IntLowOp IntExpr | EMPTY;
+MulDiv          : IntTerm MulDivRest;
+MulDivRest      : IntHighOp MulDiv | EMPTY;
+IntTerm         : _OpenParen IntExpr _CloseParen
                 | _LiteralInt
                 | _Id
                 ;
-
-#FIRST(IntExpr):             { _OpenParen, _LiteralInt, _Id }
-#FIRST(IntLowOp):            { _OpAdd, _OpNegate }
-#FIRST(IntExprRest):         { _OpAdd, _OpNegate }
-#FIRST(IntSecondary):        { _OpenParen, _LiteralInt, _Id }
-#FIRST(IntHighOp):           { _OpMultiply, _OpDivide, _OpMod }
-#FIRST(IntSecondaryRest):    { _OpMultiply, _OpDivide, _OpMod }
-#FIRST(IntBase):             { _OpenParen, _LiteralInt, _Id }
 
 # --- Variables ---
 VarDefStatement     : Type _Id _OpAssign Expr _Semicolon ;
