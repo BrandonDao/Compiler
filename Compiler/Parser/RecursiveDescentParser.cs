@@ -49,16 +49,16 @@ namespace Compiler.Parser
             return trimmedTokens;
         }
 
-        private Program ParseProgram(List<LeafNode> tokens, ref int position)
+        private ProgramNode ParseProgram(List<LeafNode> tokens, ref int position)
         {
             throw new NotImplementedException();
         }
 
-        private VariableDefinition ParseVariableDefinition(List<LeafNode> tokens, ref int position)
+        private VariableDefinitionNode ParseVariableDefinition(List<LeafNode> tokens, ref int position)
         {
             throw new NotImplementedException();
         }
-        private EqualsValue ParseEqualsValue(List<LeafNode> tokens, ref int position)
+        private EqualsValueNode ParseEqualsValue(List<LeafNode> tokens, ref int position)
         {
             throw new NotImplementedException();
         }
@@ -71,7 +71,7 @@ namespace Compiler.Parser
             var rest = ParseLowValueExprRest(ref position)
                 ?? throw new NotImplementedException("'ParseLowValueExprRest' failed to parse!");
 
-            if (rest is Epsilon) return highExpr;
+            if (rest is EpsilonNode) return highExpr;
 
             rest.Children[0] = highExpr;
             rest.UpdateRange();
@@ -85,7 +85,7 @@ namespace Compiler.Parser
                 var rest = ParseHighValueExprRest(ref position)
                     ?? throw new NotImplementedException("'ParseHighValueExprRest' failed to parse!");
 
-                if (rest is Epsilon) return lhs;
+                if (rest is EpsilonNode) return lhs;
 
                 rest.Children[0] = lhs;
                 rest.UpdateRange();
@@ -93,10 +93,10 @@ namespace Compiler.Parser
 
                 SyntaxNode? ParseHighValueExprRest(ref int position)
                 {
-                    if (position >= tokens.Count) return Epsilon.Instance;
+                    if (position >= tokens.Count) return EpsilonNode.Instance;
 
                     var op = ParseHighOp(ref position);
-                    if (op is null) return Epsilon.Instance;
+                    if (op is null) return EpsilonNode.Instance;
 
                     var rhs = ParseHighValueExpr(ref position)
                         ?? throw new ArgumentException($"Could not parse the expression after the operator {op.Children[1]}!");
@@ -114,10 +114,10 @@ namespace Compiler.Parser
             }
             SyntaxNode? ParseLowValueExprRest(ref int position)
             {
-                if (position >= tokens.Count) return Epsilon.Instance;
+                if (position >= tokens.Count) return EpsilonNode.Instance;
 
                 var op = ParseLowOp(ref position);
-                if (op is null) return Epsilon.Instance;
+                if (op is null) return EpsilonNode.Instance;
 
                 var rhs = ParseValueExpression(tokens, ref position)
                     ?? throw new ArgumentException($"Could not parse the expression after the operator {op.Children[1]}!");
@@ -183,14 +183,14 @@ namespace Compiler.Parser
             }
         }
 
-        public class Program : SyntaxNode;
-        public class VariableDefinition : SyntaxNode;
-        public class EqualsValue : SyntaxNode;
-        public class Collapsible : SyntaxNode;
-        public class Epsilon : Collapsible
+        public class ProgramNode : SyntaxNode;
+        public class VariableDefinitionNode : SyntaxNode;
+        public class EqualsValueNode : SyntaxNode;
+        public abstract class CollapsibleNode : SyntaxNode;
+        public class EpsilonNode : CollapsibleNode
         {
-            public static Epsilon Instance { get; } = new();
-            private Epsilon() { }
+            public static EpsilonNode Instance { get; } = new();
+            private EpsilonNode() { }
         }
     }
 }
