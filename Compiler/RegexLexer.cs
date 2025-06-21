@@ -12,38 +12,41 @@ namespace Compiler
     {
         private static readonly TokenDefinition[] tokenDefinitions =
         [
-            new(LexPriority.Primitive, @"\b(int8)\b", (v, sl, sc, el, ec) => new Int8Leaf(v, sl, sc, el, ec)),
-            new(LexPriority.Primitive, @"\b(int16)\b", (v, sl, sc, el, ec) => new Int16Leaf(v, sl, sc, el, ec)),
-            new(LexPriority.Primitive, @"\b(int32)\b", (v, sl, sc, el, ec) => new Int32Leaf(v, sl, sc, el, ec)),
-            new(LexPriority.Primitive, @"\b(int64)\b", (v, sl, sc, el, ec) => new Int64Leaf(v, sl, sc, el, ec)),
-            new(LexPriority.Primitive, @"\b(bool)\b", (v, sl, sc, el, ec) => new BoolLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.PrimitiveOrKeyword, @"\b(int8|i8)\b", (v, sl, sc, el, ec) => new Int8Leaf(v, sl, sc, el, ec)),
+            new(LexPriority.PrimitiveOrKeyword, @"\b(int16|i16)\b", (v, sl, sc, el, ec) => new Int16Leaf(v, sl, sc, el, ec)),
+            new(LexPriority.PrimitiveOrKeyword, @"\b(int32|i32)\b", (v, sl, sc, el, ec) => new Int32Leaf(v, sl, sc, el, ec)),
+            new(LexPriority.PrimitiveOrKeyword, @"\b(int64|i64)\b", (v, sl, sc, el, ec) => new Int64Leaf(v, sl, sc, el, ec)),
+            new(LexPriority.PrimitiveOrKeyword, @"\bbool\b", (v, sl, sc, el, ec) => new BoolLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.PrimitiveOrKeyword, @"\blet\b", (v, sl, sc, el, ec) => new LetKeywordLeaf(v, sl, sc, el, ec)),
 
-            new(LexPriority.PrimaryOperator, @"(==)", (v, sl, sc, el, ec) => new EqualityOperatorLeaf(v, sl, sc, el, ec)),
-            new(LexPriority.PrimaryOperator, @"(-)", (v, sl, sc, el, ec) => new NegateOperatorLeaf(v, sl, sc, el, ec)),
-            new(LexPriority.PrimaryOperator, @"(\+)", (v, sl, sc, el, ec) => new AddOperatorLeaf(v, sl, sc, el, ec)),
-            new(LexPriority.PrimaryOperator, @"(\*)", (v, sl, sc, el, ec) => new MultiplyOperatorLeaf(v, sl, sc, el, ec)),
-            new(LexPriority.PrimaryOperator, @"(/)", (v, sl, sc, el, ec) => new DivideOperatorLeaf(v, sl, sc, el, ec)),
-            new(LexPriority.PrimaryOperator, @"(%)", (v, sl, sc, el, ec) => new ModOperatorLeaf(v, sl, sc, el, ec)),
-            new(LexPriority.PrimaryOperator, @"(\|)", (v, sl, sc, el, ec) => new OrOperatorLeaf(v, sl, sc, el, ec)),
-            new(LexPriority.PrimaryOperator, @"(&)", (v, sl, sc, el, ec) => new AndOperatorLeaf(v, sl, sc, el, ec)),
-            new(LexPriority.SecondaryOperator, @"(=)", (v, sl, sc, el, ec) => new AssignmentOperatorLeaf(v, sl, sc, el, ec)),
-            new(LexPriority.SecondaryOperator, @"(!)", (v, sl, sc, el, ec) => new NotOperatorLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.PrimaryOperator, @"=", (v, sl, sc, el, ec) => new EqualityOperatorLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.PrimaryOperator, @"-", (v, sl, sc, el, ec) => new NegateOperatorLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.PrimaryOperator, @"\+", (v, sl, sc, el, ec) => new AddOperatorLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.PrimaryOperator, @"\*", (v, sl, sc, el, ec) => new MultiplyOperatorLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.PrimaryOperator, @"/", (v, sl, sc, el, ec) => new DivideOperatorLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.PrimaryOperator, @"%", (v, sl, sc, el, ec) => new ModOperatorLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.PrimaryOperator, @"\|", (v, sl, sc, el, ec) => new OrOperatorLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.PrimaryOperator, @"&", (v, sl, sc, el, ec) => new AndOperatorLeaf(v, sl, sc, el, ec)),
 
-            new(LexPriority.Literal, @"\b(\d+)\b", (v, sl, sc, el, ec) => new IntLiteralLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.SecondaryOperator, @"=", (v, sl, sc, el, ec) => new AssignmentOperatorLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.SecondaryOperator, @"!", (v, sl, sc, el, ec) => new NotOperatorLeaf(v, sl, sc, el, ec)),
+
+            new(LexPriority.Literal, @"\b\d+\b", (v, sl, sc, el, ec) => new IntLiteralLeaf(v, sl, sc, el, ec)),
             new(LexPriority.Literal, @"\b(true|false)\b", (v, sl, sc, el, ec) => new BoolLiteralLeaf(v, sl, sc, el, ec)),
 
-            new(LexPriority.Whitespace  , @"(\s+)", (v, sl, sc, el, ec) => new WhitespaceLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.Whitespace  , @"\s+", (v, sl, sc, el, ec) => new WhitespaceLeaf(v, sl, sc, el, ec)),
 
-            new(LexPriority.Punctuation, @"(;)", (v, sl, sc, el, ec) => new SemicolonLeaf(v, sl, sc, el, ec)),
-            new(LexPriority.Punctuation, @"(,)", (v, sl, sc, el, ec) => new CommaLeaf(v, sl, sc, el, ec)),
-            new(LexPriority.Punctuation, @"(\{)", (v, sl, sc, el, ec) => new OpenBraceLeaf(v, sl, sc, el, ec)),
-            new(LexPriority.Punctuation, @"(\})", (v, sl, sc, el, ec) => new CloseBraceLeaf(v, sl, sc, el, ec)),
-            new(LexPriority.Punctuation, @"(\()", (v, sl, sc, el, ec) => new OpenParenthesisLeaf(v, sl, sc, el, ec)),
-            new(LexPriority.Punctuation, @"(\))", (v, sl, sc, el, ec) => new CloseParenthesisLeaf(v, sl, sc, el, ec)),
-            new(LexPriority.Punctuation, @"(\[)", (v, sl, sc, el, ec) => new OpenSquareBracketLeaf(v, sl, sc, el, ec)),
-            new(LexPriority.Punctuation, @"(\])", (v, sl, sc, el, ec) => new CloseSquareBracketLeaf(v, sl, sc, el, ec)),
-            new(LexPriority.Punctuation, @"(<)", (v, sl, sc, el, ec) => new OpenAngleBracketLeaf(v, sl, sc, el, ec)),
-            new(LexPriority.Punctuation, @"(>)", (v, sl, sc, el, ec) => new CloseAngleBracketLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.Punctuation, @";", (v, sl, sc, el, ec) => new SemicolonLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.Punctuation, @":", (v, sl, sc, el, ec) => new ColonLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.Punctuation, @",", (v, sl, sc, el, ec) => new CommaLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.Punctuation, @"\{", (v, sl, sc, el, ec) => new OpenBraceLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.Punctuation, @"\}", (v, sl, sc, el, ec) => new CloseBraceLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.Punctuation, @"\(", (v, sl, sc, el, ec) => new OpenParenthesisLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.Punctuation, @"\)", (v, sl, sc, el, ec) => new CloseParenthesisLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.Punctuation, @"\[", (v, sl, sc, el, ec) => new OpenSquareBracketLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.Punctuation, @"\]", (v, sl, sc, el, ec) => new CloseSquareBracketLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.Punctuation, @"<", (v, sl, sc, el, ec) => new OpenAngleBracketLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.Punctuation, @">", (v, sl, sc, el, ec) => new CloseAngleBracketLeaf(v, sl, sc, el, ec)),
 
             new(LexPriority.Identifier, @"\b([a-zA-Z_][a-zA-Z0-9_]*)\b", (v, sl, sc, el, ec) => new IdentifierLeaf(v, sl, sc, el, ec))
         ];
@@ -76,50 +79,66 @@ namespace Compiler
             bool errorFlag = false;
             List<LeafNode> tokens = [];
 
-            int lineIdx = 0;
+            int relativeLineIdx = 0;
             int relativeCharIdx = 0;
 
             for (int textIdx = 0; textIdx < text.Length;)
             {
                 TokenDefinition? matchedDef = null;
                 Match match = Match.Empty;
+                bool isSuccess = false;
 
                 foreach (var def in orderedDefinitions)
                 {
                     match = def.Regex.Match(text, textIdx);
 
-                    if (!match.Success || match.Index != textIdx) continue;
+                    isSuccess = match.Success && match.Index == textIdx;
+
+                    if (!isSuccess) continue;
 
                     matchedDef = def;
                     break;
                 }
 
-                if (onUnexpectedToken != null && !match.Success)
+                if (onUnexpectedToken != null && !isSuccess)
                 {
                     errorFlag = true;
-                    onUnexpectedToken(lineIdx, relativeCharIdx, match.Value);
-                    errorMessageBuilder.Append($"Line {lineIdx}\t'{text[textIdx]}'\n");
+                    onUnexpectedToken.Invoke(relativeLineIdx, relativeCharIdx, text[textIdx].ToString());
+                    errorMessageBuilder.Append($"Line {relativeLineIdx}, Char {relativeCharIdx}\t'{text[textIdx]}'\n");
+
+                    relativeCharIdx++;
+                    textIdx++;
+                    continue;
                 }
-                else
+
+
+                int startLine = relativeLineIdx;
+                int startChar = relativeCharIdx;
+
+                if (matchedDef!.Priority == LexPriority.Whitespace)
                 {
-                    int startLine = lineIdx;
-                    int startChar = relativeCharIdx;
-
-                    if (matchedDef!.Priority == LexPriority.Whitespace) // Whitespace
+                    foreach (var c in match.Value)
                     {
-                        lineIdx += match.Value.Count(c => c == '\n');
-                        relativeCharIdx = 0;
+                        if (c == '\n')
+                        {
+                            relativeLineIdx++;
+                            relativeCharIdx = 0;
+                        }
+                        else
+                        {
+                            relativeCharIdx++;
+                        }
                     }
-
-                    LeafNode node = matchedDef!.NodeFactory.Invoke(
-                        value: match.Value,
-                        startLine: startLine,
-                        startChar: startChar,
-                        endLine: lineIdx,
-                        endChar: relativeCharIdx + match.Length);
-
-                    tokens.Add(node);
                 }
+
+                LeafNode node = matchedDef!.NodeFactory.Invoke(
+                    value: match.Value,
+                    startLine: startLine,
+                    startChar: startChar,
+                    endLine: relativeLineIdx,
+                    endChar: relativeCharIdx + match.Length);
+
+                tokens.Add(node);
 
                 relativeCharIdx += match.Length;
                 textIdx += match.Length;

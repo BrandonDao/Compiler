@@ -2,7 +2,7 @@ namespace CompilerLib.Lexer
 {
     public enum LexPriority : byte
     {
-        Primitive = 0,
+        PrimitiveOrKeyword = 0,
         PrimaryOperator = 5,
         SecondaryOperator = 10,
         Literal = 20,
