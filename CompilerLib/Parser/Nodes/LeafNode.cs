@@ -67,5 +67,7 @@ namespace CompilerLib.Parser.Nodes
                 Children[1].FlattenBackToInput(builder);
             }
         }
+
+        public override string ToString() => $"[{StartLine}.{StartChar} - {EndLine}.{EndChar}] {GetType().Name} Token: {Value}";
     }
 }

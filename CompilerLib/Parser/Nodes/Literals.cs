@@ -21,4 +21,9 @@ namespace CompilerLib.Parser.Nodes
     {
         public override string GrammarIdentifier => "LiteralBool";
     }
+    public class BoolLiteralNode : SyntaxNode
+    {
+        public BoolLiteralNode(BoolLiteralLeaf token) : base(children: [token])
+            => UpdateRange();
+    }
 }

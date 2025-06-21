@@ -27,6 +27,7 @@ namespace Compiler
             new(LexPriority.PrimaryOperator, @"(\|)", (v, sl, sc, el, ec) => new OrOperatorLeaf(v, sl, sc, el, ec)),
             new(LexPriority.PrimaryOperator, @"(&)", (v, sl, sc, el, ec) => new AndOperatorLeaf(v, sl, sc, el, ec)),
             new(LexPriority.SecondaryOperator, @"(=)", (v, sl, sc, el, ec) => new AssignmentOperatorLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.SecondaryOperator, @"(!)", (v, sl, sc, el, ec) => new NotOperatorLeaf(v, sl, sc, el, ec)),
 
             new(LexPriority.Literal, @"\b(\d+)\b", (v, sl, sc, el, ec) => new IntLiteralLeaf(v, sl, sc, el, ec)),
             new(LexPriority.Literal, @"\b(true|false)\b", (v, sl, sc, el, ec) => new BoolLiteralLeaf(v, sl, sc, el, ec)),
