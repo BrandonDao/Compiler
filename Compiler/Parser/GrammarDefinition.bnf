@@ -51,35 +51,26 @@ Type            : PrimitiveType | _Id;
 Expr            : BoolExpr
                 | IntExpr
                 ;
-BoolExpr        : EqualityExpr BoolExprRest
-                ;
-EqualityExpr    : ValueExpr _OpEquality ValueExpr
-                | ValueExpr
-                ;
-BoolExprRest    : _OpOr BoolTerm BoolExprRest
-                | EMPTY
-                ;
-ValueExpr       : IntExpr
-                | BoolTerm
-                | _OpenParen BoolExpr _CloseParen
-                ;
-BoolTerm        : BoolFactor BoolTermRest ;
-BoolTermRest    : _OpAnd BoolFactor BoolTermRest
-                | EMPTY
-                ;
-BoolFactor      : _OpenParen BoolExpr _CloseParen
-                | _LiteralBool
-#                | IntExpr "<" IntExpr
-#                | IntExpr ">" IntExpr
-#                | IntExpr "<=" IntExpr
-#                | IntExpr ">=" IntExpr
-                | _Id
-                ;
+BoolExpr        : EqualityExpr OrAndRest;
+EqualityExpr    : EqualityTerm EqualityExprRest;
+EqualityExprRest: _OpEquality EqualityTerm EqualityExprRest | EMPTY;
+EqualityTerm    : OrAnd | IntExpr;
+
+OrAnd           : ValueTerm OrAndRest;
+OrAndRest       : OrAndOp EqualityExpr | EMPTY;
+OrAndOp         : _OpOr | _OpAnd;   
+
 IntExpr         : MulDiv AddSubRest;
 AddSubRest      : IntLowOp IntExpr | EMPTY;
-MulDiv          : IntTerm MulDivRest;
+MulDiv          : ValueTerm MulDivRest;
 MulDivRest      : IntHighOp MulDiv | EMPTY;
-IntTerm         : _OpenParen IntExpr _CloseParen
+
+IntLowOp        : _OpAdd | _OpNegate;
+IntHighOp       : _OpMultiply | _OpDivide | _OpMod;
+
+ValueTerm       : _Bang ValueTerm
+                | _OpenParen Expr _CloseParen
+                | _LiteralBool
                 | _LiteralInt
                 | _Id
                 ;
