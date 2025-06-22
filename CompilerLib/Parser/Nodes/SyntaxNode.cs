@@ -10,7 +10,7 @@ namespace CompilerLib.Parser.Nodes
         public int EndLine { get; set; }
         public int EndChar { get; set; }
 
-        private SyntaxNode(int startLine, int startChar, int endLine, int endChar, List<SyntaxNode> children)
+        public SyntaxNode(int startLine, int startChar, int endLine, int endChar, List<SyntaxNode> children)
         {
             Children = children;
             StartLine = startLine;
@@ -18,11 +18,12 @@ namespace CompilerLib.Parser.Nodes
             EndLine = endLine;
             EndChar = endChar;
         }
-
-        public SyntaxNode(List<SyntaxNode> children)
-            : this(0, 0, 0, 0, children) { }
         public SyntaxNode(int startLine, int startChar, int endLine, int endChar)
-            : this(startLine, startChar, endLine, endChar, []) { }
+            : this(startLine, startChar, endLine, endChar, []) {}
+        public SyntaxNode(List<SyntaxNode> children)
+        {
+            Children = children;
+        }
         public SyntaxNode() : this([]) { }
 
         public virtual void UpdateRange()

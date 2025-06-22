@@ -7,6 +7,7 @@
 # _Int32
 # _Int64
 # _Bool
+# _Let
 # _OpEquality
 # _OpOr
 # _OpAnd
@@ -20,6 +21,7 @@
 # _LiteralBool
 # _Whitespace
 # _Semicolon
+# _Colon
 # _Comma
 # _OpenBrace
 # _CloseBrace
@@ -30,9 +32,6 @@
 # _OpenAngleBracket
 # _CloseAngleBracket
 # _Id
-
-# Must exist in the file somewhere
-ENTRYPOINT: Program;
 
 PrimitiveType   : _Int8 | _Int16 | _Int32 | _Int32 | _Int64 | _Bool;
 
@@ -46,6 +45,10 @@ TopLevel        : VarDefStatement
 
 # Types
 Type            : PrimitiveType | _Id;
+
+# --- Variables ---
+VarNameType         : _Id _Colon Type;
+VarDefStatement     : _Let VarNameType _OpAssign ValueExpr _Semicolon;
 
 # Expressions
 ValueExpr       : HighExpr LowExprRest;
@@ -62,6 +65,3 @@ ValueTerm       : _OpNot ValueTerm
                 | _LiteralInt
                 | _Id
                 ;
-
-# --- Variables ---
-VarDefStatement     : Type _Id _OpAssign Expr _Semicolon ;

@@ -3,8 +3,10 @@ using System.Text;
 namespace CompilerLib.Parser.Nodes.Punctuation
 {
     public class WhitespaceLeaf(string value, int startLine, int startChar, int endLine, int endChar)
-        : PunctuationLeaf(value, startLine, startChar, endLine, endChar)
+        : PunctuationLeaf(value, startLine, startChar, endLine, endChar, EmptyChildren)
     {
+        private static List<SyntaxNode> EmptyChildren { get; } = [];
+
         public override string GrammarIdentifier => "Whitespace";
         public bool IsLeading { get; set; }
 

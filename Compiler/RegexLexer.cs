@@ -19,7 +19,7 @@ namespace Compiler
             new(LexPriority.PrimitiveOrKeyword, @"\bbool\b", (v, sl, sc, el, ec) => new BoolLeaf(v, sl, sc, el, ec)),
             new(LexPriority.PrimitiveOrKeyword, @"\blet\b", (v, sl, sc, el, ec) => new LetKeywordLeaf(v, sl, sc, el, ec)),
 
-            new(LexPriority.PrimaryOperator, @"=", (v, sl, sc, el, ec) => new EqualityOperatorLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.PrimaryOperator, @"==", (v, sl, sc, el, ec) => new EqualityOperatorLeaf(v, sl, sc, el, ec)),
             new(LexPriority.PrimaryOperator, @"-", (v, sl, sc, el, ec) => new NegateOperatorLeaf(v, sl, sc, el, ec)),
             new(LexPriority.PrimaryOperator, @"\+", (v, sl, sc, el, ec) => new AddOperatorLeaf(v, sl, sc, el, ec)),
             new(LexPriority.PrimaryOperator, @"\*", (v, sl, sc, el, ec) => new MultiplyOperatorLeaf(v, sl, sc, el, ec)),
@@ -79,8 +79,8 @@ namespace Compiler
             bool errorFlag = false;
             List<LeafNode> tokens = [];
 
-            int relativeLineIdx = 0;
-            int relativeCharIdx = 0;
+            int relativeLineIdx = 1;
+            int relativeCharIdx = 1;
 
             for (int textIdx = 0; textIdx < text.Length;)
             {
@@ -117,17 +117,24 @@ namespace Compiler
 
                 if (matchedDef!.Priority == LexPriority.Whitespace)
                 {
-                    foreach (var c in match.Value)
+                    bool hasNewline = false;
+                    int charIdxOffset = 0;
+                    for (int i = 0; i < match.Length; i++)
                     {
-                        if (c == '\n')
+                        if (text[textIdx + i] == '\n')
                         {
+                            hasNewline = true;
                             relativeLineIdx++;
-                            relativeCharIdx = 0;
+                            relativeCharIdx = 1;
                         }
                         else
                         {
-                            relativeCharIdx++;
+                            charIdxOffset++;
                         }
+                    }
+                    if (hasNewline)
+                    {
+                        relativeCharIdx += charIdxOffset;
                     }
                 }
 

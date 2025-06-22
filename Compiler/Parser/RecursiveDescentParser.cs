@@ -4,7 +4,7 @@ using CompilerLib.Parser.Nodes.Punctuation;
 
 namespace Compiler.Parser
 {
-    public partial class RecursiveDescentParser : IParser
+    public class RecursiveDescentParser : IParser
     {
         public static RecursiveDescentParser Instance { get; private set; } = new();
 
@@ -16,7 +16,7 @@ namespace Compiler.Parser
 
             int position = 0;
             tokens = HangWhitespace(tokens);
-            return ParseValueExpression(tokens, ref position);
+            return ParseVariableDefinition(tokens, ref position);
         }
 
         public SyntaxNode ToAST(SyntaxNode root) => throw new NotImplementedException();
@@ -43,55 +43,109 @@ namespace Compiler.Parser
                     continue;
                 }
 
-                tokens[i - 1].Children.Add(tokens[i]);
+                trimmedTokens[^1].Children.Add(tokens[i]);
             }
 
             return trimmedTokens;
         }
 
-        private ProgramNode ParseProgram(List<LeafNode> tokens, ref int position)
+
+
+        private static VariableDefinitionNode ParseVariableDefinition(List<LeafNode> tokens, ref int position)
         {
-            throw new NotImplementedException();
+            if (tokens[position] is not LetKeywordLeaf letKeywordLeaf)
+                throw new ArgumentException($"Expected 'let' keyword at start of variable definition, not {tokens[position]}!");
+
+            position++;
+            var varNameTypeNode = ParseVariableNameType(tokens, ref position);
+
+            if (tokens[position] is not AssignmentOperatorLeaf assignmentOpLeaf)
+                throw new ArgumentException($"Expected '=' token after variable name and type, not {tokens[position]}!");
+
+            position++;
+            var valueExpr = ParseValueExpression(tokens, ref position);
+
+            if (tokens[position] is not SemicolonLeaf semicolonLeaf)
+                throw new ArgumentException($"Expected ';' token at the end of variable definition, not {tokens[position]}!");
+
+            return new VariableDefinitionNode(letKeywordLeaf, varNameTypeNode, assignmentOpLeaf, valueExpr, semicolonLeaf);
         }
 
-        private VariableDefinitionNode ParseVariableDefinition(List<LeafNode> tokens, ref int position)
+        private static TypeNode ParseType(List<LeafNode> tokens, ref int position)
         {
-            throw new NotImplementedException();
+            if (tokens[position] is IdentifierLeaf idToken)
+            {
+                position++;
+                return new IdentifierNode(idToken);
+            }
+            if(tokens[position] is Int8Leaf int8Token)
+            {
+                position++;
+                return new Int8Node(int8Token);
+            }
+            if (tokens[position] is Int16Leaf int16Token)
+            {
+                position++;
+                return new Int16Node(int16Token);
+            }
+            if (tokens[position] is Int32Leaf int32Token)
+            {
+                position++;
+                return new Int32Node(int32Token);
+            }
+            if (tokens[position] is Int64Leaf int64Token)
+            {
+                position++;
+                return new Int64Node(int64Token);
+            }
+            if (tokens[position] is BoolLeaf boolToken)
+            {
+                position++;
+                return new BoolNode(boolToken);
+            }
+
+            throw new ArgumentException($"Expected an identifier or primitive type!");
         }
-        private EqualsValueNode ParseEqualsValue(List<LeafNode> tokens, ref int position)
+        
+        private static VariableNameTypeNode ParseVariableNameType(List<LeafNode> tokens, ref int position)
         {
-            throw new NotImplementedException();
+            if (tokens[position] is not IdentifierLeaf idToken)
+                throw new ArgumentException($"Expected an identifier as variable name, not {tokens[position]}!");
+
+            position++;
+
+            if (tokens[position] is not ColonLeaf colonToken)
+                throw new ArgumentException($"Expected a ':' token after variable name '{idToken.Value}', not {tokens[position]}!");
+
+            position++;
+
+            var typeNode = ParseType(tokens, ref position)
+                ?? throw new ArgumentException($"Expected a type after ':' token, not {tokens[position]}!");
+
+            return new VariableNameTypeNode(new IdentifierNode(idToken), colonToken, typeNode);
         }
 
-        static SyntaxNode? ParseValueExpression(List<LeafNode> tokens, ref int position)
+        private static SyntaxNode ParseValueExpression(List<LeafNode> tokens, ref int position)
         {
             var highExpr = ParseHighValueExpr(ref position);
-            if (highExpr is null) return null;
-
-            var rest = ParseLowValueExprRest(ref position)
-                ?? throw new NotImplementedException("'ParseLowValueExprRest' failed to parse!");
-
+            var rest = ParseLowValueExprRest(ref position);
             if (rest is EpsilonNode) return highExpr;
 
             rest.Children[0] = highExpr;
             rest.UpdateRange();
             return rest;
 
-            SyntaxNode? ParseHighValueExpr(ref int position)
+            SyntaxNode ParseHighValueExpr(ref int position)
             {
                 var lhs = ParseValueTerm(ref position);
-                if (lhs is null) return null;
-
-                var rest = ParseHighValueExprRest(ref position)
-                    ?? throw new NotImplementedException("'ParseHighValueExprRest' failed to parse!");
-
+                var rest = ParseHighValueExprRest(ref position);
                 if (rest is EpsilonNode) return lhs;
 
                 rest.Children[0] = lhs;
                 rest.UpdateRange();
                 return rest;
 
-                SyntaxNode? ParseHighValueExprRest(ref int position)
+                SyntaxNode ParseHighValueExprRest(ref int position)
                 {
                     if (position >= tokens.Count) return EpsilonNode.Instance;
 
@@ -106,36 +160,42 @@ namespace Compiler.Parser
 
                     SyntaxNode? ParseHighOp(ref int position)
                     {
-                        if (tokens[position] is MultiplyOperatorLeaf) return new MultiplyExpressionNode(children: [null, tokens[position++], null]);
-                        else if (tokens[position] is DivideOperatorLeaf) return new DivideExpressionNode(children: [null, tokens[position++], null]);
+                        if (tokens[position] is MultiplyOperatorLeaf) return new MultiplyOperationNode(children: [null, tokens[position++], null]);
+                        else if (tokens[position] is DivideOperatorLeaf) return new DivideOperationNode(children: [null, tokens[position++], null]);
                         else return null;
                     }
                 }
             }
-            SyntaxNode? ParseLowValueExprRest(ref int position)
+            SyntaxNode ParseLowValueExprRest(ref int position)
             {
                 if (position >= tokens.Count) return EpsilonNode.Instance;
+
+                int start = position;
 
                 var op = ParseLowOp(ref position);
                 if (op is null) return EpsilonNode.Instance;
 
-                var rhs = ParseValueExpression(tokens, ref position)
-                    ?? throw new ArgumentException($"Could not parse the expression after the operator {op.Children[1]}!");
+                var rhs = ParseValueExpression(tokens, ref position);
+                if (rhs is null)
+                {
+                    position = start;
+                    return EpsilonNode.Instance;
+                }
 
                 op.Children[^1] = rhs;
                 return op;
 
                 SyntaxNode? ParseLowOp(ref int position)
                 {
-                    if (tokens[position] is AddOperatorLeaf) return new AddExpressionNode(children: [null, tokens[position++], null]);
-                    else if (tokens[position] is NegateOperatorLeaf) return new SubtractExpressionNode(children: [null, tokens[position++], null]);
-                    else if (tokens[position] is OrOperatorLeaf) return new OrExpressionNode(children: [null, tokens[position++], null]);
-                    else if (tokens[position] is AndOperatorLeaf) return new AndExpressionNode(children: [null, tokens[position++], null]);
-                    else if (tokens[position] is EqualityOperatorLeaf) return new EqualityExpressionNode(children: [null, tokens[position++], null]);
+                    if (tokens[position] is AddOperatorLeaf) return new AddOperationNode(children: [null, tokens[position++], null]);
+                    else if (tokens[position] is NegateOperatorLeaf) return new SubtractOperationNode(children: [null, tokens[position++], null]);
+                    else if (tokens[position] is OrOperatorLeaf) return new OrOperationNode(children: [null, tokens[position++], null]);
+                    else if (tokens[position] is AndOperatorLeaf) return new AndOperationNode(children: [null, tokens[position++], null]);
+                    else if (tokens[position] is EqualityOperatorLeaf) return new EqualityOperationNode(children: [null, tokens[position++], null]);
                     else return null;
                 }
             }
-            SyntaxNode? ParseValueTerm(ref int position)
+            SyntaxNode ParseValueTerm(ref int position)
             {
                 switch (tokens[position])
                 {
@@ -145,7 +205,7 @@ namespace Compiler.Parser
                             var notValueNode = ParseValueTerm(ref position)
                                 ?? throw new ArgumentException("Could not parse the expression after the '!' token!");
 
-                            var notOpNode = new NotExpressionNode([notToken, null]);
+                            var notOpNode = new NotOperationNode([notToken, null]);
                             notOpNode.Children[1] = notValueNode;
                             notOpNode.UpdateRange();
                             return notOpNode;
@@ -177,15 +237,26 @@ namespace Compiler.Parser
                         position++;
                         return new BoolLiteralNode(strLitToken);
 
-                    default:
-                        return null;
+                    default: throw new ArgumentException($"Could not parse Value Term, found {tokens[position]}!");
                 }
             }
         }
 
+
+
         public class ProgramNode : SyntaxNode;
-        public class VariableDefinitionNode : SyntaxNode;
-        public class EqualsValueNode : SyntaxNode;
+        public class VariableDefinitionNode : SyntaxNode
+        {
+            public VariableDefinitionNode(LetKeywordLeaf let, VariableNameTypeNode nameType, AssignmentOperatorLeaf equals, SyntaxNode value, SemicolonLeaf semicolon)
+                : base([let, nameType, equals, value, semicolon])
+                => UpdateRange();
+        }
+        public class VariableNameTypeNode : SyntaxNode
+        {
+            public VariableNameTypeNode(IdentifierNode id, ColonLeaf colon, TypeNode type) : base([id, colon, type])
+                => UpdateRange();
+        }
+
         public abstract class CollapsibleNode : SyntaxNode;
         public class EpsilonNode : CollapsibleNode
         {
