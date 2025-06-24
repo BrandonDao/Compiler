@@ -1,1 +1,15 @@
-let exprTypeMismatch:bool= a * 5 == !(!true & a) + 2;
+fn main() -> void {
+    {
+        while true
+        {
+            let exprTypeMismatch:bool= a * 5 == !(!true & a) + 2;
+        }
+    }
+}
+
+func returnsInt32(a:i32) -> Int32 {}
+
+func returnsVoid(a:i32, b:i64) {
+    ;
+    ;
+}

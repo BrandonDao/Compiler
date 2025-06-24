@@ -15,6 +15,12 @@ namespace CompilerLib.Parser.Nodes
         public LeafNode(string value, int startLine, int startChar, int endLine, int endChar)
             : this(value, startLine, startChar, endLine, endChar, []) { }
 
+        public override SyntaxNode ToAST()
+        {
+            Children.Clear(); // Clear whitespace
+            return this;
+        }
+
         public override void UpdateRange()
         {
             if (Children.Count == 0) return;

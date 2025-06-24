@@ -26,6 +26,8 @@ namespace CompilerLib.Parser.Nodes
         }
         public SyntaxNode() : this([]) { }
 
+        public abstract SyntaxNode ToAST();
+
         public virtual void UpdateRange()
         {
             if (Children.Count == 0) return;

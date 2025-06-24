@@ -1,13 +1,17 @@
 # Grammar Definition
 # Use the special keyword "EMPTY" to indicate an EMPTY/epsilon rule
-# Comments start with "#" and cannot go on the same line as a rule
+# Comments start with "#"
 # Terminals are prefixed with _. Here is a full list of supported terminals:
 # _Int8
 # _Int16
 # _Int32
 # _Int64
 # _Bool
+# _Void
 # _Let
+# _While
+# _Func
+# _SmallArrow
 # _OpEquality
 # _OpOr
 # _OpAnd
@@ -34,19 +38,16 @@
 # _Id
 
 PrimitiveType   : _Int8 | _Int16 | _Int32 | _Int32 | _Int64 | _Bool;
-
-# Top-level structure
-Program         : TopLevelList;
-TopLevelList    : TopLevel TopLevelList
-                | EMPTY
-                ;
-TopLevel        : VarDefStatement
-                ;
-
-# Types
 Type            : PrimitiveType | _Id;
 
-# --- Variables ---
+# Top-level structure
+Program             : ClassFuncFieldList;
+ClassFuncFieldList  : ClassFuncField ClassFuncFieldList
+                    | EMPTY
+                    ;
+ClassFuncField      : FunctionDef;
+
+# Variables
 VarNameType         : _Id _Colon Type;
 VarDefStatement     : _Let VarNameType _OpAssign ValueExpr _Semicolon;
 
@@ -65,3 +66,23 @@ ValueTerm       : _OpNot ValueTerm
                 | _LiteralInt
                 | _Id
                 ;
+
+# Functions
+FunctionDef     : _Func _Id  ParamList ReturnTypeDef Block;
+ParamList       : _OpenParen ParamListStart _CloseParen
+ParamListStart  : VarNameType ParamListRest | EMPTY*; # If EMPTY: Assumed to be []
+ParamListRest   : _Comma ParamListStart     | EMPTY;
+ReturnTypeDef   : _SmallArrow ReturnType    | EMPTY*; # If EMPTY: Assumed to be void
+ReturnType      : _Void | Type;
+
+# Control Statements
+WhileStatement  : _While ValueExpr Block;
+
+
+
+StatementBlock  : VarDefStatement
+                | WhileStatement
+                | StatementBlock
+                | EmptyStatement
+                ;
+EmptyStatement  : _Semicolon;

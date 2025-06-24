@@ -17,7 +17,15 @@ namespace Compiler
             new(LexPriority.PrimitiveOrKeyword, @"\b(int32|i32)\b", (v, sl, sc, el, ec) => new Int32Leaf(v, sl, sc, el, ec)),
             new(LexPriority.PrimitiveOrKeyword, @"\b(int64|i64)\b", (v, sl, sc, el, ec) => new Int64Leaf(v, sl, sc, el, ec)),
             new(LexPriority.PrimitiveOrKeyword, @"\bbool\b", (v, sl, sc, el, ec) => new BoolLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.PrimitiveOrKeyword, @"\bvoid\b", (v, sl, sc, el, ec) => new VoidLeaf(v, sl, sc, el, ec)),
             new(LexPriority.PrimitiveOrKeyword, @"\blet\b", (v, sl, sc, el, ec) => new LetKeywordLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.PrimitiveOrKeyword, @"\bwhile\b", (v, sl, sc, el, ec) => new WhileKeywordLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.PrimitiveOrKeyword, @"\b(func|fn)\b", (v, sl, sc, el, ec) => new FunctionKeywordLeaf(v, sl, sc, el, ec)),
+
+            new(LexPriority.PrimaryPunctuation, @";", (v, sl, sc, el, ec) => new SemicolonLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.PrimaryPunctuation, @":", (v, sl, sc, el, ec) => new ColonLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.PrimaryPunctuation, @"->", (v, sl, sc, el, ec) => new SmallArrowLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.PrimaryPunctuation, @",", (v, sl, sc, el, ec) => new CommaLeaf(v, sl, sc, el, ec)),
 
             new(LexPriority.PrimaryOperator, @"==", (v, sl, sc, el, ec) => new EqualityOperatorLeaf(v, sl, sc, el, ec)),
             new(LexPriority.PrimaryOperator, @"-", (v, sl, sc, el, ec) => new NegateOperatorLeaf(v, sl, sc, el, ec)),
@@ -36,17 +44,14 @@ namespace Compiler
 
             new(LexPriority.Whitespace  , @"\s+", (v, sl, sc, el, ec) => new WhitespaceLeaf(v, sl, sc, el, ec)),
 
-            new(LexPriority.Punctuation, @";", (v, sl, sc, el, ec) => new SemicolonLeaf(v, sl, sc, el, ec)),
-            new(LexPriority.Punctuation, @":", (v, sl, sc, el, ec) => new ColonLeaf(v, sl, sc, el, ec)),
-            new(LexPriority.Punctuation, @",", (v, sl, sc, el, ec) => new CommaLeaf(v, sl, sc, el, ec)),
-            new(LexPriority.Punctuation, @"\{", (v, sl, sc, el, ec) => new OpenBraceLeaf(v, sl, sc, el, ec)),
-            new(LexPriority.Punctuation, @"\}", (v, sl, sc, el, ec) => new CloseBraceLeaf(v, sl, sc, el, ec)),
-            new(LexPriority.Punctuation, @"\(", (v, sl, sc, el, ec) => new OpenParenthesisLeaf(v, sl, sc, el, ec)),
-            new(LexPriority.Punctuation, @"\)", (v, sl, sc, el, ec) => new CloseParenthesisLeaf(v, sl, sc, el, ec)),
-            new(LexPriority.Punctuation, @"\[", (v, sl, sc, el, ec) => new OpenSquareBracketLeaf(v, sl, sc, el, ec)),
-            new(LexPriority.Punctuation, @"\]", (v, sl, sc, el, ec) => new CloseSquareBracketLeaf(v, sl, sc, el, ec)),
-            new(LexPriority.Punctuation, @"<", (v, sl, sc, el, ec) => new OpenAngleBracketLeaf(v, sl, sc, el, ec)),
-            new(LexPriority.Punctuation, @">", (v, sl, sc, el, ec) => new CloseAngleBracketLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.SecondaryPunctuation, @"\{", (v, sl, sc, el, ec) => new OpenBraceLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.SecondaryPunctuation, @"\}", (v, sl, sc, el, ec) => new CloseBraceLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.SecondaryPunctuation, @"\(", (v, sl, sc, el, ec) => new OpenParenthesisLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.SecondaryPunctuation, @"\)", (v, sl, sc, el, ec) => new CloseParenthesisLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.SecondaryPunctuation, @"\[", (v, sl, sc, el, ec) => new OpenSquareBracketLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.SecondaryPunctuation, @"\]", (v, sl, sc, el, ec) => new CloseSquareBracketLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.SecondaryPunctuation, @"<", (v, sl, sc, el, ec) => new OpenAngleBracketLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.SecondaryPunctuation, @">", (v, sl, sc, el, ec) => new CloseAngleBracketLeaf(v, sl, sc, el, ec)),
 
             new(LexPriority.Identifier, @"\b([a-zA-Z_][a-zA-Z0-9_]*)\b", (v, sl, sc, el, ec) => new IdentifierLeaf(v, sl, sc, el, ec))
         ];

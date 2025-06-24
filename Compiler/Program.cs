@@ -26,10 +26,10 @@ namespace Compiler
                 Console.Write(token.GetPrintable());
             }
 
-            Console.WriteLine("DETOKENIZATION");
+            Console.WriteLine("\nDETOKENIZATION");
             Console.WriteLine(RegexLexer.Detokenize(tokens));
 
-            Console.WriteLine("CONCRETE SYNTAX TREE");
+            Console.WriteLine("\nCONCRETE SYNTAX TREE");
             var parser = RecursiveDescentParser.Instance;
             var root = parser.ParseTokens(tokens) ?? throw new ArgumentException("Failed to parse tokens into CST!");
             Console.WriteLine(root.GetPrintable());
@@ -38,6 +38,16 @@ namespace Compiler
             StringBuilder builder = new();
             root.FlattenBackToInput(builder);
             Console.WriteLine(builder.ToString());
+
+            Console.WriteLine("\nCST -> AST");
+            var astRoot = parser.ToAST(root) ?? throw new ArgumentException("Failed to convert CST to AST!");
+            Console.WriteLine(astRoot.GetPrintable());
+
+            Console.WriteLine("AST -> ORIGINAL INPUT");
+            builder.Clear();
+            astRoot.FlattenBackToInput(builder);
+            Console.WriteLine(builder.ToString());
+
         }
     }
 }
