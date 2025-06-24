@@ -126,6 +126,7 @@ namespace Compiler.Parser
 
             return new VariableNameTypeNode(idToken, colonToken, typeNode);
         }
+
         private static SyntaxNode ParseValueExpression(List<LeafNode> tokens, ref int position)
         {
             var highExpr = ParseHighValueExpr(ref position);
@@ -133,8 +134,8 @@ namespace Compiler.Parser
             if (rest is EpsilonNode) return highExpr;
 
             rest.Children[0] = highExpr;
-            rest.UpdateRange();
-            return rest;
+
+            return FixAssociativity(rest);
 
             SyntaxNode ParseHighValueExpr(ref int position)
             {
@@ -143,8 +144,8 @@ namespace Compiler.Parser
                 if (rest is EpsilonNode) return lhs;
 
                 rest.Children[0] = lhs;
-                rest.UpdateRange();
-                return rest;
+
+                return FixAssociativity(rest);
 
                 SyntaxNode ParseHighValueExprRest(ref int position)
                 {
@@ -184,6 +185,7 @@ namespace Compiler.Parser
                 }
 
                 op.Children[^1] = rhs;
+
                 return op;
 
                 SyntaxNode? ParseLowOp(ref int position)
@@ -240,6 +242,23 @@ namespace Compiler.Parser
 
                     default: throw new ArgumentException($"Could not parse Value Term, found {tokens[position]}!");
                 }
+            }
+            SyntaxNode FixAssociativity(SyntaxNode node)
+            {
+                if ((node is LowPrecedenceOperationNode && node.Children.Count > 1 && node.Children[2] is LowPrecedenceOperationNode)
+                || (node is HighPrecedenceOperationNode && node.Children.Count > 1 && node.Children[2] is HighPrecedenceOperationNode))
+                {
+                    var newRoot = node.Children[2];
+                    node.Children[2] = newRoot.Children[0];
+                    newRoot.Children[0] = node;
+                    node.UpdateRange();
+                    newRoot.UpdateRange();
+                    node = newRoot;
+
+                    node.Children[0] = FixAssociativity(node.Children[0]);
+                }
+                node.UpdateRange();
+                return node;
             }
         }
 

@@ -1,10 +1,6 @@
-fn main() -> void {
-    {
-        while true
-        {
-            let exprTypeMismatch:bool= a * 5 == !(!true & a) + 2;
-        }
-    }
+fn main()
+{
+    let test:i32 = 5 - 3 - 2;
 }
 
 func returnsInt32(a:i32) -> Int32 {}
