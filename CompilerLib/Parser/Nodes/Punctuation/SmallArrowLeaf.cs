@@ -5,19 +5,8 @@ namespace CompilerLib.Parser.Nodes.Punctuation
     {
         public override string GrammarIdentifier => "SmallArrow";
         public bool IsInserted { get; init; }
-
-        public SmallArrowLeaf(int startLine, int startChar)
-            : this("->", startLine, startChar, startLine, startChar)
-            => IsInserted = true;
-
-        public override string GetPrintable(int indent)
-        {
-            if (IsInserted)
-            {
-                var indentString = new string(' ', indent);
-                return $"[{StartLine}.{StartChar}]\t\t{indentString}{GetType().Name} (INSERTED)\n";
-            }
-            return base.GetPrintable(indent);
-        }
     }
+
+    public class ImplicitSmallArrowLeaf(int startLine, int startChar)
+        : ImplicitNode("->", startLine, startChar);
 }

@@ -1,11 +1,10 @@
-fn main()
+namespace Program.ExtendedName
 {
-    let test:i32 = 5 - 3 - 2;
-}
+    let a:i32 = 5;
+    let b:i32 = 10;
 
-func returnsInt32(a:i32) -> Int32 {}
-
-func returnsVoid(a:i32, b:i64) {
-    ;
-    ;
+    fn main()
+    {
+        let c:i32 = b - a;
+    }
 }

@@ -1,4 +1,4 @@
-using System.Runtime.CompilerServices;
+using System.Text;
 using CompilerLib.Parser.Nodes;
 using CompilerLib.Parser.Nodes.Operators;
 using CompilerLib.Parser.Nodes.Punctuation;
@@ -17,7 +17,7 @@ namespace Compiler.Parser
 
             int position = 0;
             tokens = HangWhitespace(tokens);
-            return ParseFunctionDefinition(tokens, ref position);
+            return ParseNamespaceDefinition(tokens, ref position);
         }
 
         public SyntaxNode ToAST(SyntaxNode root) => root.ToAST();
@@ -262,7 +262,6 @@ namespace Compiler.Parser
             }
         }
 
-
         private static FunctionDefinitionNode ParseFunctionDefinition(List<LeafNode> tokens, ref int position)
         {
             if (tokens[position] is not FunctionKeywordLeaf funcKeywordLeaf)
@@ -280,12 +279,14 @@ namespace Compiler.Parser
                 if (tokens[position] is not OpenBraceLeaf)
                     throw new ArgumentException($"Expected '->' or '{{' token after function parameters, not {tokens[position]}!");
 
-                // Inserting Arrow and Void as return type
-                arrowToken = new SmallArrowLeaf(tokens[position].StartLine, tokens[position].StartChar);
-                var voidType = new VoidLeaf(tokens[position].StartLine, tokens[position].StartChar);
-
                 var voidReturningBody = ParseStatementBlock(tokens, ref position);
-                return new FunctionDefinitionNode(funcKeywordLeaf, idToken, parameterList, arrowToken, voidType, voidReturningBody);
+                return new FunctionDefinitionNode(
+                    funcKeywordLeaf,
+                    idToken,
+                    parameterList,
+                    new ImplicitSmallArrowLeaf(tokens[position].StartLine, tokens[position].StartChar),
+                    new ImplicitVoidLeaf(tokens[position].StartLine, tokens[position].StartChar),
+                    voidReturningBody);
             }
             position++;
 
@@ -356,7 +357,36 @@ namespace Compiler.Parser
             return new WhileStatementNode(whileKeywordLeaf, condition, body);
         }
 
-        private static StatementBlockNode ParseStatementBlock(List<LeafNode> tokens, ref int position)
+        private static NamespaceDefinitionNode ParseNamespaceDefinition(List<LeafNode> tokens, ref int position)
+        {
+            if (tokens[position] is not NamespaceKeywordLeaf namespaceKeywordLeaf)
+                throw new ArgumentException($"Expected 'namespace' keyword at start of namespace definition, not {tokens[position]}!");
+
+            position++;
+            var qualifiedName = ParseQualifiedName(tokens, ref position);
+
+            var block = ParseHighLevelBlock(tokens, ref position);
+
+            return new NamespaceDefinitionNode(namespaceKeywordLeaf, qualifiedName, block);
+        }
+        private static QualifiedNameNode ParseQualifiedName(List<LeafNode> tokens, ref int position)
+        {
+            if (tokens[position] is not IdentifierLeaf startIdLeaf)
+                throw new ArgumentException($"Expected an identifier at start of qualified name, not {tokens[position]}!");
+
+            List<SyntaxNode> nameParts = [startIdLeaf];
+            position++;
+
+            // contains ids and dots
+            while (tokens[position] is IdentifierLeaf or DotLeaf)
+            {
+                nameParts.Add(tokens[position]);
+                position++;
+            }
+            return new QualifiedNameNode(nameParts);
+        }
+
+        private static BlockNode ParseStatementBlock(List<LeafNode> tokens, ref int position)
         {
             if (tokens[position] is not OpenBraceLeaf openBraceToken)
                 throw new ArgumentException($"Expected '{{' token at start of block, not {tokens[position]}!");
@@ -395,10 +425,41 @@ namespace Compiler.Parser
                     throw new ArgumentException($"Unexpected token in block: {tokens[position]}!");
                 }
             }
-            return new StatementBlockNode(openBraceToken, statements, closeBraceLeaf);
+            return new BlockNode(openBraceToken, statements, closeBraceLeaf);
         }
+        private static BlockNode ParseHighLevelBlock(List<LeafNode> tokens, ref int position)
+        {
+            if (tokens[position] is not OpenBraceLeaf openBraceToken)
+                throw new ArgumentException($"Expected '{{' token at start of block, not {tokens[position]}!");
 
+            position++;
+            List<SyntaxNode> statements = [];
 
+            CloseBraceLeaf closeBraceLeaf;
+            while (true)
+            {
+                if (tokens[position] is FunctionKeywordLeaf)
+                {
+                    statements.Add(ParseFunctionDefinition(tokens, ref position));
+                }
+                else if (tokens[position] is NamespaceKeywordLeaf)
+                {
+                    statements.Add(ParseNamespaceDefinition(tokens, ref position));
+                }
+                else if(tokens[position] is LetKeywordLeaf)
+                {
+                    statements.Add(ParseVariableDefinition(tokens, ref position));
+                }
+                else if (tokens[position] is CloseBraceLeaf leaf)
+                {
+                    position++;
+                    closeBraceLeaf = leaf;
+                    break;
+                }
+                else throw new ArgumentException($"Unexpected token in block: {tokens[position]}!");
+            }
+            return new BlockNode(openBraceToken, statements, closeBraceLeaf);
+        }
 
         public class VariableDefinitionNode : SyntaxNode
         {
@@ -418,6 +479,67 @@ namespace Compiler.Parser
                 return this;
             }
         }
+
+        public class QualifiedNameNode : SyntaxNode
+        {
+            public string Name { get; set; }
+            private readonly List<SyntaxNode> trimmedChildren;
+
+            public QualifiedNameNode(List<SyntaxNode> children) : base(children)
+            {
+                trimmedChildren = new List<SyntaxNode>(capacity: children.Count);
+
+                if (children.Count == 0 || children[0] is not IdentifierLeaf startIdLeaf)
+                    throw new ArgumentException("QualifiedNameNode must start with an IdentifierLeaf!");
+
+                StringBuilder nameBuilder = new(startIdLeaf.Value);
+                for (int i = 1; i < children.Count; i++)
+                {
+                    SyntaxNode? child = children[i];
+                    if (child is IdentifierLeaf idLeaf)
+                    {
+                        nameBuilder.Append('.');
+                        nameBuilder.Append(idLeaf.Value);
+                        trimmedChildren.Add(idLeaf);
+                    }
+                }
+                Name = nameBuilder.ToString();
+            }
+
+            public override SyntaxNode ToAST()
+            {
+                Children = trimmedChildren;
+                for (int i = 0; i < Children.Count; i++)
+                {
+                    Children[i] = Children[i].ToAST();
+                }
+                return this;
+            }
+
+            public override string GetPrintable(int indent = 0)
+            {
+                var indentString = new string(' ', indent);
+                StringBuilder builder = new();
+                builder.Append($"[{StartLine}.{StartChar} - {EndLine}.{EndChar}]\t{indentString}{GetType().Name} Name: {Name}\n");
+                foreach (var child in Children)
+                {
+                    builder.Append(child.GetPrintable(indent + 4));
+                }
+                return builder.ToString();
+            }
+        }
+        public class NamespaceDefinitionNode(NamespaceKeywordLeaf namespaceKeyword, QualifiedNameNode name, BlockNode block)
+            : SyntaxNode([namespaceKeyword, name, block])
+        {
+            public override SyntaxNode ToAST()
+            {
+                Children.RemoveAt(0); // Remove the namespace keyword
+                Children[0] = Children[0].ToAST(); // Convert the qualified name to AST
+                Children[1] = Children[1].ToAST(); // Convert the block to AST
+                return this;
+            }
+        }
+
         public class VariableNameTypeNode : SyntaxNode
         {
             public VariableNameTypeNode(IdentifierLeaf id, ColonLeaf colon, SyntaxNode type) : base([id, colon, type])
@@ -436,7 +558,7 @@ namespace Compiler.Parser
 
         public class FunctionDefinitionNode : SyntaxNode
         {
-            public FunctionDefinitionNode(FunctionKeywordLeaf func, IdentifierLeaf id, ParameterListNode parameterList, SmallArrowLeaf arrow, SyntaxNode returnType, StatementBlockNode body)
+            public FunctionDefinitionNode(FunctionKeywordLeaf func, IdentifierLeaf id, ParameterListNode parameterList, SyntaxNode arrow, SyntaxNode returnType, BlockNode body)
                 : base([func, id, parameterList, arrow, returnType, body])
                 => UpdateRange();
 
@@ -481,7 +603,7 @@ namespace Compiler.Parser
 
         public class WhileStatementNode : SyntaxNode
         {
-            public WhileStatementNode(WhileKeywordLeaf whileKeyword, SyntaxNode condition, StatementBlockNode body)
+            public WhileStatementNode(WhileKeywordLeaf whileKeyword, SyntaxNode condition, BlockNode body)
                 : base([whileKeyword, condition, body])
                 => UpdateRange();
 
@@ -493,12 +615,10 @@ namespace Compiler.Parser
             }
         }
 
-        public abstract class BlockNode(OpenBraceLeaf openBrace, List<SyntaxNode> statements, CloseBraceLeaf closeBrace)
-            : SyntaxNode([openBrace, .. statements, closeBrace]);
-        public class StatementBlockNode : BlockNode
+        public class BlockNode : SyntaxNode
         {
-            public StatementBlockNode(OpenBraceLeaf openBrace, List<SyntaxNode> statements, CloseBraceLeaf closeBrace)
-                : base(openBrace, statements, closeBrace)
+            public BlockNode(OpenBraceLeaf openBrace, List<SyntaxNode> statements, CloseBraceLeaf closeBrace)
+                : base([openBrace, .. statements, closeBrace])
                 => UpdateRange();
 
             public override SyntaxNode ToAST()

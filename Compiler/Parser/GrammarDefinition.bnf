@@ -11,6 +11,7 @@
 # _Let
 # _While
 # _Func
+# _Namespace
 # _SmallArrow
 # _OpEquality
 # _OpOr
@@ -27,6 +28,7 @@
 # _Semicolon
 # _Colon
 # _Comma
+# _Dot
 # _OpenBrace
 # _CloseBrace
 # _OpenParen
@@ -37,15 +39,23 @@
 # _CloseAngleBracket
 # _Id
 
-PrimitiveType   : _Int8 | _Int16 | _Int32 | _Int32 | _Int64 | _Bool;
-Type            : PrimitiveType | _Id;
+PrimitiveType       : _Int8 | _Int16 | _Int32 | _Int32 | _Int64 | _Bool;
+Type                : PrimitiveType | _Id;
+
+QualifiedName       : _Id QualifiedNameRest;
+QualifiedNameRest   : _Dot _Id QualifiedNameRest | EMPTY;
 
 # Top-level structure
-Program             : ClassFuncFieldList;
-ClassFuncFieldList  : ClassFuncField ClassFuncFieldList
-                    | EMPTY
-                    ;
-ClassFuncField      : FunctionDef;
+NamespaceDef        : _Namespace QualifiedName HighLevelBlock;
+
+HighLevelBlock      : _OpenBrace HighLevelBlockItem HighLevelBlockRest _CloseBrace;
+HighLevelBlockRest  : HighLevelBlock | EMPTY;
+HighLevelBlockItem  : NamespaceDef | FunctionDef | VarDefStatement;
+
+StatementBlock      : _OpenBrace StatementBlockItem StatementBlockRest _CloseBrace;
+StatementBlockRest  : StatementBlock | EMPTY;
+StatementBlockItem  : VarDefStatement | WhileStatement | StatementBlock | EmptyStatement;
+EmptyStatement      : _Semicolon;
 
 # Variables
 VarNameType         : _Id _Colon Type;
@@ -68,7 +78,7 @@ ValueTerm       : _OpNot ValueTerm
                 ;
 
 # Functions
-FunctionDef     : _Func _Id  ParamList ReturnTypeDef Block;
+FunctionDef     : _Func _Id  ParamList ReturnTypeDef StatementBlock;
 ParamList       : _OpenParen ParamListStart _CloseParen
 ParamListStart  : VarNameType ParamListRest | EMPTY*; # If EMPTY: Assumed to be []
 ParamListRest   : _Comma ParamListStart     | EMPTY;
@@ -76,13 +86,4 @@ ReturnTypeDef   : _SmallArrow ReturnType    | EMPTY*; # If EMPTY: Assumed to be 
 ReturnType      : _Void | Type;
 
 # Control Statements
-WhileStatement  : _While ValueExpr Block;
-
-
-
-StatementBlock  : VarDefStatement
-                | WhileStatement
-                | StatementBlock
-                | EmptyStatement
-                ;
-EmptyStatement  : _Semicolon;
+WhileStatement  : _While ValueExpr StatementBlock;

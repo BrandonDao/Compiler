@@ -21,11 +21,13 @@ namespace Compiler
             new(LexPriority.PrimitiveOrKeyword, @"\blet\b", (v, sl, sc, el, ec) => new LetKeywordLeaf(v, sl, sc, el, ec)),
             new(LexPriority.PrimitiveOrKeyword, @"\bwhile\b", (v, sl, sc, el, ec) => new WhileKeywordLeaf(v, sl, sc, el, ec)),
             new(LexPriority.PrimitiveOrKeyword, @"\b(func|fn)\b", (v, sl, sc, el, ec) => new FunctionKeywordLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.PrimitiveOrKeyword, @"\bnamespace\b", (v, sl, sc, el, ec) => new NamespaceKeywordLeaf(v, sl, sc, el, ec)),
 
             new(LexPriority.PrimaryPunctuation, @";", (v, sl, sc, el, ec) => new SemicolonLeaf(v, sl, sc, el, ec)),
             new(LexPriority.PrimaryPunctuation, @":", (v, sl, sc, el, ec) => new ColonLeaf(v, sl, sc, el, ec)),
             new(LexPriority.PrimaryPunctuation, @"->", (v, sl, sc, el, ec) => new SmallArrowLeaf(v, sl, sc, el, ec)),
             new(LexPriority.PrimaryPunctuation, @",", (v, sl, sc, el, ec) => new CommaLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.PrimaryPunctuation, @"\.", (v, sl, sc, el, ec) => new DotLeaf(v, sl, sc, el, ec)),
 
             new(LexPriority.PrimaryOperator, @"==", (v, sl, sc, el, ec) => new EqualityOperatorLeaf(v, sl, sc, el, ec)),
             new(LexPriority.PrimaryOperator, @"-", (v, sl, sc, el, ec) => new NegateOperatorLeaf(v, sl, sc, el, ec)),
@@ -77,7 +79,7 @@ namespace Compiler
 
             var missing = nodeTypes.Except(tokenDefinitions.Select(def => def.NodeFactory(string.Empty, 0, 0, 0, 0).GetType()));
 
-            if (missing.Any()) throw new InvalidOperationException($"Some token types are missing definitions: {string.Join(", ", missing)}");
+            if (missing.Any(t => !t.IsSubclassOf(typeof(ImplicitNode)))) throw new InvalidOperationException($"Some token types are missing definitions: {string.Join(", ", missing)}");
 #endif
 
             StringBuilder errorMessageBuilder = new("Unexpected characters found!\n");

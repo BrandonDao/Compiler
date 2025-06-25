@@ -8,22 +8,15 @@ namespace CompilerLib.Parser.Nodes
         : KeywordLeaf(value, startLine, startChar, endLine, endChar)
     {
         public override string GrammarIdentifier => "Void";
-        public bool IsInserted { get; init; }
-        public VoidLeaf(int startLine, int startChar)
-            : this("void", startLine, startChar, startLine, startChar)
-            => IsInserted = true;
-
-        public override string GetPrintable(int indent)
-        {
-            if (IsInserted)
-            {
-                var indentString = new string(' ', indent);
-                return $"[{StartLine}.{StartChar}]\t\t{indentString}{GetType().Name} (INSERTED)\n";
-            }
-            return base.GetPrintable(indent);
-        }
     }
+    public class ImplicitVoidLeaf(int startLine, int startChar)
+        : ImplicitNode("void", startLine, startChar);
 
+    public class NamespaceKeywordLeaf(string value, int startLine, int startChar, int endLine, int endChar)
+        : KeywordLeaf(value, startLine, startChar, endLine, endChar)
+    {
+        public override string GrammarIdentifier => "Namespace";
+    }
     public class LetKeywordLeaf(string value, int startLine, int startChar, int endLine, int endChar)
         : KeywordLeaf(value, startLine, startChar, endLine, endChar)
     {

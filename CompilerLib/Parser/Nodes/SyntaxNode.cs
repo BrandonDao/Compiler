@@ -4,7 +4,7 @@ namespace CompilerLib.Parser.Nodes
 {
     public abstract class SyntaxNode
     {
-        public List<SyntaxNode> Children { get; }
+        public List<SyntaxNode> Children { get; protected set; }
         public int StartLine { get; set; }
         public int StartChar { get; set; }
         public int EndLine { get; set; }
