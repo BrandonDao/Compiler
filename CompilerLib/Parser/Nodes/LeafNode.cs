@@ -5,11 +5,9 @@ using CompilerLib.Parser.Nodes.Punctuation;
 
 namespace CompilerLib.Parser.Nodes
 {
-    [DebuggerDisplay("{StartLine}[{StartChar}..{EndChar}]: {Value}")]
     public abstract class LeafNode(string value, int startLine, int startChar, int endLine, int endChar, List<SyntaxNode> children)
         : SyntaxNode(startLine, startChar, endLine, endChar, children)
     {
-        public abstract string GrammarIdentifier { get; }
         public string Value { get; } = value;
 
         public LeafNode(string value, int startLine, int startChar, int endLine, int endChar)

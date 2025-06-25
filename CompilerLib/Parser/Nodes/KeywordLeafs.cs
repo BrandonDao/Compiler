@@ -5,31 +5,16 @@ namespace CompilerLib.Parser.Nodes
 
 
     public class VoidLeaf(string value, int startLine, int startChar, int endLine, int endChar)
-        : KeywordLeaf(value, startLine, startChar, endLine, endChar)
-    {
-        public override string GrammarIdentifier => "Void";
-    }
+        : KeywordLeaf(value, startLine, startChar, endLine, endChar);
     public class ImplicitVoidLeaf(int startLine, int startChar)
         : ImplicitNode("void", startLine, startChar);
 
     public class NamespaceKeywordLeaf(string value, int startLine, int startChar, int endLine, int endChar)
-        : KeywordLeaf(value, startLine, startChar, endLine, endChar)
-    {
-        public override string GrammarIdentifier => "Namespace";
-    }
+        : KeywordLeaf(value, startLine, startChar, endLine, endChar);
     public class LetKeywordLeaf(string value, int startLine, int startChar, int endLine, int endChar)
-        : KeywordLeaf(value, startLine, startChar, endLine, endChar)
-    {
-        public override string GrammarIdentifier => "Let";
-    }
+        : KeywordLeaf(value, startLine, startChar, endLine, endChar);
     public class WhileKeywordLeaf(string value, int startLine, int startChar, int endLine, int endChar)
-        : KeywordLeaf(value, startLine, startChar, endLine, endChar)
-    {
-        public override string GrammarIdentifier => "While";
-    }
+        : KeywordLeaf(value, startLine, startChar, endLine, endChar);
     public class FunctionKeywordLeaf(string value, int startLine, int startChar, int endLine, int endChar)
-        : KeywordLeaf(value, startLine, startChar, endLine, endChar)
-    {
-        public override string GrammarIdentifier => "Func";
-    }
+        : KeywordLeaf(value, startLine, startChar, endLine, endChar);
 }

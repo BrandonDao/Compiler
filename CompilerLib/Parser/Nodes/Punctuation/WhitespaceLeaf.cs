@@ -6,8 +6,6 @@ namespace CompilerLib.Parser.Nodes.Punctuation
         : PunctuationLeaf(value, startLine, startChar, endLine, endChar, EmptyChildren)
     {
         private static List<SyntaxNode> EmptyChildren { get; } = [];
-
-        public override string GrammarIdentifier => "Whitespace";
         public bool IsLeading { get; set; }
 
         public override void FlattenBackToInput(StringBuilder builder)

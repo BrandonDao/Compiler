@@ -1,8 +1,5 @@
 namespace CompilerLib.Parser.Nodes.Punctuation
 {
     public class SemicolonLeaf(string value, int startLine, int startChar, int endLine, int endChar)
-        : PunctuationLeaf(value, startLine, startChar, endLine, endChar)
-    {
-        public override string GrammarIdentifier => "Semicolon";
-    }
+        : PunctuationLeaf(value, startLine, startChar, endLine, endChar);
 }
