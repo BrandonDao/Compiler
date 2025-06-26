@@ -20,7 +20,7 @@ namespace Compiler.Parser
             return ParseNamespaceDefinition(tokens, ref position);
         }
 
-        public SyntaxNode ToAST(SyntaxNode root) => root.ToAST();
+        public SyntaxNode ToAST(SyntaxNode root) => new ParserEntrypoint(root.ToAST());
 
         private static List<LeafNode> HangWhitespace(List<LeafNode> tokens)
         {
@@ -446,7 +446,7 @@ namespace Compiler.Parser
                 {
                     statements.Add(ParseNamespaceDefinition(tokens, ref position));
                 }
-                else if(tokens[position] is LetKeywordLeaf)
+                else if (tokens[position] is LetKeywordLeaf)
                 {
                     statements.Add(ParseVariableDefinition(tokens, ref position));
                 }
@@ -463,9 +463,15 @@ namespace Compiler.Parser
 
         public class VariableDefinitionNode : SyntaxNode
         {
+            public string Name { get; }
+            public string Type { get; }
             public VariableDefinitionNode(LetKeywordLeaf let, VariableNameTypeNode nameType, AssignmentOperatorLeaf equals, SyntaxNode value, SemicolonLeaf semicolon)
                 : base([let, nameType, equals, value, semicolon])
-                => UpdateRange();
+            {
+                Name = nameType.Name;
+                Type = nameType.Type;
+                UpdateRange();
+            }
 
             public override SyntaxNode ToAST()
             {
@@ -478,6 +484,12 @@ namespace Compiler.Parser
                 }
                 return this;
             }
+        }
+
+        public interface IContainsScopeNode
+        {
+            public string Name { get; }
+            public BlockNode Block { get; }
         }
 
         public class QualifiedNameNode : SyntaxNode
@@ -529,8 +541,11 @@ namespace Compiler.Parser
             }
         }
         public class NamespaceDefinitionNode(NamespaceKeywordLeaf namespaceKeyword, QualifiedNameNode name, BlockNode block)
-            : SyntaxNode([namespaceKeyword, name, block])
+            : SyntaxNode([namespaceKeyword, name, block]), IContainsScopeNode
         {
+            public string Name => name.Name;
+            public BlockNode Block => block;
+
             public override SyntaxNode ToAST()
             {
                 Children.RemoveAt(0); // Remove the namespace keyword
@@ -542,8 +557,24 @@ namespace Compiler.Parser
 
         public class VariableNameTypeNode : SyntaxNode
         {
+            public string Name { get; }
+            public string Type { get; }
             public VariableNameTypeNode(IdentifierLeaf id, ColonLeaf colon, SyntaxNode type) : base([id, colon, type])
-                => UpdateRange();
+            {
+                Name = id.Value;
+                if (type is IdentifierLeaf idLeaf)
+                {
+                    Type = idLeaf.Value;
+                }
+                else if (type is PrimitiveLeaf primitiveLeaf)
+                {
+                    Type = primitiveLeaf.TypeName;
+                }
+                else
+                    throw new ArgumentException($"Expected an identifier or primitive type, not {type}!");
+
+                UpdateRange();
+            }
 
             public override SyntaxNode ToAST()
             {
@@ -556,11 +587,17 @@ namespace Compiler.Parser
             }
         }
 
-        public class FunctionDefinitionNode : SyntaxNode
+        public class FunctionDefinitionNode : SyntaxNode, IContainsScopeNode
         {
+            public string Name { get; }
+            public BlockNode Block { get; }
             public FunctionDefinitionNode(FunctionKeywordLeaf func, IdentifierLeaf id, ParameterListNode parameterList, SyntaxNode arrow, SyntaxNode returnType, BlockNode body)
                 : base([func, id, parameterList, arrow, returnType, body])
-                => UpdateRange();
+            {
+                Name = id.Value;
+                Block = body;
+                UpdateRange();
+            }
 
             public override SyntaxNode ToAST()
             {
@@ -601,11 +638,16 @@ namespace Compiler.Parser
             }
         }
 
-        public class WhileStatementNode : SyntaxNode
+        public class WhileStatementNode : SyntaxNode, IContainsScopeNode
         {
+            public string Name => "While Loop";
+            public BlockNode Block { get; }
             public WhileStatementNode(WhileKeywordLeaf whileKeyword, SyntaxNode condition, BlockNode body)
                 : base([whileKeyword, condition, body])
-                => UpdateRange();
+            {
+                Block = body;
+                UpdateRange();
+            }
 
             public override SyntaxNode ToAST()
             {
@@ -617,6 +659,7 @@ namespace Compiler.Parser
 
         public class BlockNode : SyntaxNode
         {
+            public uint ID { get; set; }
             public BlockNode(OpenBraceLeaf openBrace, List<SyntaxNode> statements, CloseBraceLeaf closeBrace)
                 : base([openBrace, .. statements, closeBrace])
                 => UpdateRange();
@@ -654,6 +697,14 @@ namespace Compiler.Parser
             public override SyntaxNode ToAST()
             {
                 Children.Clear();
+                return this;
+            }
+        }
+        public class ParserEntrypoint(SyntaxNode child) : SyntaxNode([child])
+        {
+            public override SyntaxNode ToAST()
+            {
+                Children[0] = Children[0].ToAST();
                 return this;
             }
         }

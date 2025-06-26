@@ -31,16 +31,16 @@ namespace Compiler
 
             Console.WriteLine("\nCONCRETE SYNTAX TREE");
             var parser = RecursiveDescentParser.Instance;
-            var root = parser.ParseTokens(tokens) ?? throw new ArgumentException("Failed to parse tokens into CST!");
-            Console.WriteLine(root.GetPrintable());
+            var cstRoot = parser.ParseTokens(tokens) ?? throw new ArgumentException("Failed to parse tokens into CST!");
+            Console.WriteLine(cstRoot.GetPrintable());
 
             Console.WriteLine("CST -> ORIGINAL INPUT");
             StringBuilder builder = new();
-            root.FlattenBackToInput(builder);
+            cstRoot.FlattenBackToInput(builder);
             Console.WriteLine(builder.ToString());
 
             Console.WriteLine("\nCST -> AST");
-            var astRoot = parser.ToAST(root) ?? throw new ArgumentException("Failed to convert CST to AST!");
+            var astRoot = parser.ToAST(cstRoot) ?? throw new ArgumentException("Failed to convert CST to AST!");
             Console.WriteLine(astRoot.GetPrintable());
 
             Console.WriteLine("AST -> ORIGINAL INPUT");
@@ -48,6 +48,13 @@ namespace Compiler
             astRoot.FlattenBackToInput(builder);
             Console.WriteLine(builder.ToString());
 
+            SemanticAnalyzer analyzer = new();
+            bool _ = analyzer.TryBuildSymbolTable(astRoot, out string symbolTableCompletionMessage);
+
+            Console.WriteLine("\nSYMBOL TABLE");
+            Console.WriteLine(symbolTableCompletionMessage);
+            Console.WriteLine();
+            Console.WriteLine(analyzer.GetPrintable());
         }
     }
 }

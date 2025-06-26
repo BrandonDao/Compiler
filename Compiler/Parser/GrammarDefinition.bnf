@@ -2,43 +2,21 @@
 # Use the special keyword "EMPTY" to indicate an EMPTY/epsilon rule
 # Comments start with "#"
 # Terminals are prefixed with _. Here is a full list of supported terminals:
-# _Int8
-# _Int16
-# _Int32
-# _Int64
+# _Int8 _Int16 _Int32 _Int64
 # _Bool
 # _Void
-# _Let
-# _While
-# _Func
-# _Namespace
+# _Let _Func _While _Namespace
 # _SmallArrow
-# _OpEquality
-# _OpOr
-# _OpAnd
-# _OpNegate
-# _OpAdd
-# _OpMultiply
-# _OpDivide
-# _OpMod
+# _OpEquality _OpOr _OpAnd _OpNegate _OpAdd
+# _OpMultiply _OpDivide _OpMod
 # _OpAssign
-# _LiteralInt
-# _LiteralBool
+# _LiteralInt _LiteralBool
 # _Whitespace
-# _Semicolon
-# _Colon
-# _Comma
-# _Dot
-# _OpenBrace
-# _CloseBrace
-# _OpenParen
-# _CloseParen
-# _OpenSquareBracket
-# _CloseSquareBracket
-# _OpenAngleBracket
-# _CloseAngleBracket
+# _Semicolon _Colon _Comma _Dot
+# _OpenBrace _CloseBrace _OpenParen _CloseParen _OpenSquareBracket _CloseSquareBracket _OpenAngleBracket _CloseAngleBracket
 # _Id
 
+Literal             : _LiteralInt | _LiteralBool;
 PrimitiveType       : _Int8 | _Int16 | _Int32 | _Int32 | _Int64 | _Bool;
 Type                : PrimitiveType | _Id;
 
@@ -84,6 +62,11 @@ ParamListStart  : VarNameType ParamListRest | EMPTY*; # If EMPTY: Assumed to be 
 ParamListRest   : _Comma ParamListStart     | EMPTY;
 ReturnTypeDef   : _SmallArrow ReturnType    | EMPTY*; # If EMPTY: Assumed to be void
 ReturnType      : _Void | Type;
+
+# FunctionCall        : _Id ArgumentList _Semicolon;
+# ArgumentList        : _OpenParen ArgumentListStart _CloseParen;
+# ArgumentListStart   : 
+# Argument            : Literal | FunctionCall | 
 
 # Control Statements
 WhileStatement  : _While ValueExpr StatementBlock;

@@ -5,6 +5,17 @@ namespace Program.ExtendedName
 
     fn main()
     {
-        let c:i32 = b - a;
+        while(true)
+        {
+            let c:i32 = b - a;
+
+            let c:i32 = failByRedefinition;
+            let a:bool = failByRedefinition;
+        }
+
+        while(false)
+        {
+            let a:bool = thisIsFine;
+        }
     }
 }
