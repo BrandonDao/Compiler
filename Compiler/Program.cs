@@ -49,10 +49,10 @@ namespace Compiler
             Console.WriteLine(builder.ToString());
 
             SemanticAnalyzer analyzer = new();
-            bool _ = analyzer.TryBuildSymbolTable(astRoot, out string symbolTableCompletionMessage);
+            bool _ = analyzer.Analyze(astRoot, out string semanticAnalyzerCompletionMessage);
 
             Console.WriteLine("\nSYMBOL TABLE");
-            Console.WriteLine(symbolTableCompletionMessage);
+            Console.WriteLine(semanticAnalyzerCompletionMessage);
             Console.WriteLine();
             Console.WriteLine(analyzer.GetPrintable());
         }

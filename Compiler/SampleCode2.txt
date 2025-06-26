@@ -1,21 +1,18 @@
 namespace Program.ExtendedName
 {
     let a:i32 = 5;
-    let b:i32 = 10;
 
-    fn main()
+    func main()
     {
         while(true)
         {
-            let c:i32 = b - a;
-
-            let c:i32 = failByRedefinition;
-            let a:bool = failByRedefinition;
+            let c:i32 = b - a - c;
         }
 
         while(false)
         {
-            let a:bool = thisIsFine;
         }
     }
+
+    let b:i32 = 10;
 }

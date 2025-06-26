@@ -2,7 +2,11 @@ using System.Text;
 
 namespace CompilerLib.Parser.Nodes
 {
-    public abstract class SyntaxNode
+    public interface IHasChildren
+    {
+        List<SyntaxNode> Children { get; }
+    }
+    public abstract class SyntaxNode : IHasChildren
     {
         public List<SyntaxNode> Children { get; protected set; }
         public int StartLine { get; set; }
@@ -19,7 +23,7 @@ namespace CompilerLib.Parser.Nodes
             EndChar = endChar;
         }
         public SyntaxNode(int startLine, int startChar, int endLine, int endChar)
-            : this(startLine, startChar, endLine, endChar, []) {}
+            : this(startLine, startChar, endLine, endChar, []) { }
         public SyntaxNode(List<SyntaxNode> children)
         {
             Children = children;

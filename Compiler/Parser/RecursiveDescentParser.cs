@@ -465,11 +465,13 @@ namespace Compiler.Parser
         {
             public string Name { get; }
             public string Type { get; }
+            public SyntaxNode AssignedValue { get; }
             public VariableDefinitionNode(LetKeywordLeaf let, VariableNameTypeNode nameType, AssignmentOperatorLeaf equals, SyntaxNode value, SemicolonLeaf semicolon)
                 : base([let, nameType, equals, value, semicolon])
             {
                 Name = nameType.Name;
                 Type = nameType.Type;
+                AssignedValue = value;
                 UpdateRange();
             }
 
@@ -486,7 +488,7 @@ namespace Compiler.Parser
             }
         }
 
-        public interface IContainsScopeNode
+        public interface IContainsScopeNode : IHasChildren
         {
             public string Name { get; }
             public BlockNode Block { get; }
@@ -657,9 +659,12 @@ namespace Compiler.Parser
             }
         }
 
-        public class BlockNode : SyntaxNode
+        public class BlockNode : SyntaxNode, IContainsScopeNode
         {
+            public string Name => "Anonymous Block";
+            public BlockNode Block => this;
             public uint ID { get; set; }
+
             public BlockNode(OpenBraceLeaf openBrace, List<SyntaxNode> statements, CloseBraceLeaf closeBrace)
                 : base([openBrace, .. statements, closeBrace])
                 => UpdateRange();
