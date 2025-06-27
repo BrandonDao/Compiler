@@ -294,7 +294,7 @@ namespace Compiler.Parser
                     }
                     else if (node is IdentifierLeaf identifier)
                     {
-                        if (symbolTable.ContainsSymbol(currentScopeID, identifier.Value)) return identifier.Value;
+                        if (symbolTable.TryGetSymbolInfo(currentScopeID, identifier.Value, out SymbolInfo? info)) return info.Type;
 
                         throw new InvalidOperationException($"Scope check failed! Encountered undefined identifier: {identifier}");
                     }
