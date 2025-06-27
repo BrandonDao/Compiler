@@ -43,11 +43,6 @@ namespace Compiler
             var astRoot = parser.ToAST(cstRoot) ?? throw new ArgumentException("Failed to convert CST to AST!");
             Console.WriteLine(astRoot.GetPrintable());
 
-            Console.WriteLine("AST -> ORIGINAL INPUT");
-            builder.Clear();
-            astRoot.FlattenBackToInput(builder);
-            Console.WriteLine(builder.ToString());
-
             SemanticAnalyzer analyzer = new();
             bool _ = analyzer.Analyze(astRoot, out string semanticAnalyzerCompletionMessage);
 

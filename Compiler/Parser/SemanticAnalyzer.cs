@@ -1,4 +1,4 @@
-using System.Linq.Expressions;
+using System.Runtime.CompilerServices;
 using System.Text;
 using CompilerLib.Parser.Nodes;
 using static Compiler.Parser.RecursiveDescentParser;
@@ -10,7 +10,7 @@ namespace Compiler.Parser
     {
         readonly SymbolTable symbolTable = new();
 
-        delegate bool AnalysisStage(SyntaxNode rootNode, out string completionMessage);
+        delegate bool AnalysisStage(SyntaxNode rootNode, StringBuilder messageStringBuilder);
         readonly AnalysisStage[] analysisStages;
 
         public SemanticAnalyzer()
@@ -25,95 +25,113 @@ namespace Compiler.Parser
 
         public bool Analyze(SyntaxNode rootNode, out string completionMessage)
         {
+            StringBuilder messageSB = new();
             foreach (var stage in analysisStages)
             {
-                if (!stage(rootNode, out completionMessage)) return false;
+                if (!stage.Invoke(rootNode, messageSB))
+                {
+                    completionMessage = messageSB.ToString();
+                    return false;
+                }
             }
-            completionMessage = "Semantic analysis completed successfully.";
+            completionMessage = $"Semantic analysis completed successfully with the following messages:\n{messageSB}";
             return true;
         }
 
-
-        private bool RegisterPrimitives(SyntaxNode _, out string completionMessage)
+        private bool RegisterPrimitives(SyntaxNode _, StringBuilder messageSB)
         {
-            int symbolID = -1;
-            symbolTable.AddSymbol(scopeID: 0, symbolID--, "int8", "int8");
-            symbolTable.AddSymbol(scopeID: 0, symbolID--, "int16", "int16");
-            symbolTable.AddSymbol(scopeID: 0, symbolID--, "int32", "int32");
-            symbolTable.AddSymbol(scopeID: 0, symbolID--, "int64", "int64");
-            symbolTable.AddSymbol(scopeID: 0, symbolID--, "bool", "bool");
+            symbolTable.AddSymbol(scopeID: 0, symbolPosition: -1, "int8", "int8");
+            symbolTable.AddSymbol(scopeID: 0, symbolPosition: -1, "int16", "int16");
+            symbolTable.AddSymbol(scopeID: 0, symbolPosition: -1, "int32", "int32");
+            symbolTable.AddSymbol(scopeID: 0, symbolPosition: -1, "int64", "int64");
+            symbolTable.AddSymbol(scopeID: 0, symbolPosition: -1, "bool", "bool");
 
-            completionMessage = "Primitive types registered successfully.";
+            messageSB.AppendLine("Primitive types registered successfully.");
             return true;
         }
-        private bool TryBuildSymbolTable(SyntaxNode rootNode, out string completionMessage)
+        private bool TryBuildSymbolTable(SyntaxNode rootNode, StringBuilder messageSB)
         {
             uint scopeID = 1;
             bool hasFailed = false;
-            StringBuilder errorSB = new("Symbol table construction failed:\n");
+            messageSB.AppendLine("Symbol table built with the following messages:");
 
-            BuildSymbolTable(rootNode, 0);
+            BuildSymbolTable(rootNode, currentScopeID: 0, symbolPosition: 0, isLocal: false);
 
             if (hasFailed)
             {
-                completionMessage = errorSB.ToString();
                 return false;
             }
-            completionMessage = $"Symbol table built successfully.";
+            messageSB.AppendLine("\tSymbol table built successfully.");
             return true;
 
-            void BuildSymbolTable(IHasChildren node, uint currentScopeID)
+            int BuildSymbolTable(IHasChildren node, uint currentScopeID, int symbolPosition, bool isLocal)
             {
                 Queue<IContainsScopeNode> nodesToProcess = new();
 
                 for (int i = 0; i < node.Children.Count; i++)
                 {
-                    SyntaxNode? child = node.Children[i];
+                    symbolPosition++;
 
+                    SyntaxNode? child = node.Children[i];
                     if (child is IContainsScopeNode scopeContainer)
                     {
-                        nodesToProcess.Enqueue(scopeContainer);
+                        if (!isLocal)
+                        {
+                            nodesToProcess.Enqueue(scopeContainer);
+                            continue;
+                        }
+
+                        string name = scopeContainer.Name;
+                        scopeContainer.Block.ID = scopeID;
+                        symbolTable.AddScope(scopeID, name, isLocal: true, currentScopeID);
+                        symbolPosition = BuildSymbolTable(scopeContainer.Block, scopeID++, symbolPosition, isLocal: true);
                     }
                     else if (child is VariableDefinitionNode varDefNode)
                     {
-                        if (symbolTable.ContainsSymbol(currentScopeID, varDefNode.Name))
+                        if (symbolTable.TryGetSymbolInfo(currentScopeID, varDefNode.NameTypeNode.Name, out var symbolInfo))
                         {
-                            hasFailed = true;
-                            errorSB.AppendLine($"\t[{varDefNode.StartLine}.{varDefNode.StartChar}-{varDefNode.EndLine}.{varDefNode.EndChar}] Variable with name '{varDefNode.Name}' already exists in scope!");
+                            if (!isLocal || (isLocal && symbolInfo.EnclosingScope.IsLocal))
+                            {
+                                hasFailed = true;
+                                messageSB.AppendLine($"\t[{varDefNode.StartLine}.{varDefNode.StartChar}-{varDefNode.EndLine}.{varDefNode.EndChar}] Variable with name '{varDefNode.NameTypeNode.Name}' already exists in scope!");
+                            }
+                            else
+                            {
+                                messageSB.AppendLine($"\t[{varDefNode.StartLine}.{varDefNode.StartChar}-{varDefNode.EndLine}.{varDefNode.EndChar}] WARNING: Variable with name '{varDefNode.NameTypeNode.Name}' is being shadowed!");
+                            }
                         }
                         else
                         {
-                            symbolTable.AddSymbol(currentScopeID, i, varDefNode.Name, varDefNode.Type);
+                            symbolTable.AddSymbol(currentScopeID, symbolPosition, varDefNode.NameTypeNode.Name, varDefNode.NameTypeNode.Type);
                         }
-                        continue;
                     }
-                    else continue;
                 }
 
                 while (nodesToProcess.Count > 0)
                 {
                     var scopeContainer = nodesToProcess.Dequeue();
+                    var isScopeContainerLocal = scopeContainer is FunctionDefinitionNode || isLocal;
 
                     string name = scopeContainer.Name;
                     scopeContainer.Block.ID = scopeID;
-                    symbolTable.AddScope(scopeID, name, currentScopeID);
-                    BuildSymbolTable(scopeContainer.Block, scopeID++);
+                    symbolTable.AddScope(scopeID, name, isScopeContainerLocal, currentScopeID);
+                    BuildSymbolTable(scopeContainer.Block, scopeID++, symbolPosition: 0, isScopeContainerLocal);
                 }
+                return symbolPosition;
             }
         }
-        private bool TryValidateScopes(SyntaxNode rootNode, out string completionMessage)
+        private bool TryValidateScopes(SyntaxNode rootNode, StringBuilder messageSB)
         {
             bool hasFailed = false;
-            StringBuilder errorSB = new("Scope validation failed:\n");
+            messageSB.AppendLine("Scope validation failed:");
 
             ValidateScopes(rootNode, 0);
             if (hasFailed)
             {
-                completionMessage = errorSB.ToString();
                 return false;
             }
 
-            completionMessage = "Scope validation completed successfully.";
+            messageSB.AppendLine("\tScope validation completed successfully.");
             return true;
 
             void ValidateScopes(IHasChildren node, uint currentScopeID)
@@ -122,26 +140,61 @@ namespace Compiler.Parser
                 {
                     SyntaxNode? child = node.Children[i];
 
-                    if (child is IdentifierLeaf idNode)
+                    if (child is VariableDefinitionNode varDefNode)
                     {
-                        if (!symbolTable.TryGetSymbolInfo(currentScopeID, idNode.Value, out SymbolInfo? info))
+                        IdentifierLeaf varID = varDefNode.NameTypeNode.Identifier;
+
+                        if (!symbolTable.TryGetSymbolInfo(currentScopeID, varDefNode.NameTypeNode.Type, out SymbolInfo? typeInfo))
                         {
                             hasFailed = true;
-                            errorSB.AppendLine($"\t[{idNode.StartLine}.{idNode.StartChar}-{idNode.EndLine}.{idNode.EndChar}] The name '{idNode.Value}' does not exist in the current context!");
+                            messageSB.AppendLine($"\t[{varDefNode.StartLine}.{varDefNode.StartChar}-{varDefNode.EndLine}.{varDefNode.EndChar}] The type '{varDefNode.NameTypeNode.Type}' is not defined in the current context!");
                         }
-                        else
-                        {
 
-                        }
+                        if (!symbolTable.TryGetSymbolInfo(currentScopeID, name: varID.Value, out SymbolInfo? nameInfo))
+                            throw new InvalidOperationException($"Symbol table failed to build variable definitions correctly! Could not find symbol: ({varID})");
+
+                        ValidateVarDefScope(varDefNode.AssignedValue, currentScopeID, nameInfo);
+
                     }
                     else if (child is IContainsScopeNode scopeContainer)
                     {
                         uint scopeID = scopeContainer.Block.ID;
                         ValidateScopes(scopeContainer.Block, scopeID);
                     }
+                    else throw new NotImplementedException();
+                }
+            }
+            void ValidateVarDefScope(IHasChildren node, uint currentScopeID, SymbolInfo definedVarInfo)
+            {
+                if (node is IdentifierLeaf id)
+                {
+                    if (!symbolTable.TryGetSymbolInfo(currentScopeID, id.Value, out SymbolInfo? symInfo))
+                    {
+                        hasFailed = true;
+                        messageSB.AppendLine($"\t[{id.StartLine}.{id.StartChar}-{id.EndLine}.{id.EndChar}] The identifier '{id.Value}' does not exist in the current context!");
+                    }
                     else
                     {
-                        ValidateScopes(child, currentScopeID);
+                        if (symInfo.EnclosingScope.IsLocal)
+                        {
+                            if (symInfo.SymbolPosition >= definedVarInfo.SymbolPosition)
+                            {
+                                hasFailed = true;
+                                messageSB.AppendLine($"\t[{id.StartLine}.{id.StartChar}-{id.EndLine}.{id.EndChar}] Cannot use identifier '{id.Value}' before is declared!");
+                            }
+                        }
+                        else if (!definedVarInfo.EnclosingScope.IsLocal)
+                        {
+                            hasFailed = true;
+                            messageSB.AppendLine($"\t[{id.StartLine}.{id.StartChar}-{id.EndLine}.{id.EndChar}] A field definition cannot reference another field '{id.Value}'!");
+                        }
+                    }
+                }
+                else
+                {
+                    foreach (SyntaxNode? child in node.Children)
+                    {
+                        ValidateVarDefScope(child, currentScopeID, definedVarInfo);
                     }
                 }
             }

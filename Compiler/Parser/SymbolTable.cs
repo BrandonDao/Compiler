@@ -5,14 +5,15 @@ namespace Compiler.Parser
 {
     internal class SymbolTable
     {
-        [DebuggerDisplay("[{EnclosingScopeID}.{SymbolID}] {Name,nq}:{Type,nq}")]
-        public record class SymbolInfo(uint EnclosingScopeID, uint SymbolID, string Name, string Type); // ID *does* carry information about order
+        [DebuggerDisplay("[{EnclosingScope.ID}.{SymbolPosition}] {Name,nq}:{Type,nq}")]
+        public record class SymbolInfo(ScopeInfo EnclosingScope, int SymbolPosition, string Name, string Type);
 
-        [DebuggerDisplay("[{ID}] {Name,nq} (Parent: {(Parent != null ? $\"[{Parent.ID}] {Parent.Name}\" : \"None\"),nq})")]
-        private class ScopeInfo(uint id, string name, ScopeInfo? parent)
+        [DebuggerDisplay("{(IsLocal ? \"LOCAL\" : string.Empty)} [{ID}] {Name,nq} (Parent: {(Parent != null ? $\"[{Parent.ID}] {Parent.Name}\" : \"None\"),nq})")]
+        public class ScopeInfo(uint id, string name, bool isLocal, ScopeInfo? parent)
         {
             public uint ID { get; } = id;
             public string Name { get; } = name;
+            public bool IsLocal { get; } = isLocal;
             public ScopeInfo? Parent { get; } = parent;
             public Dictionary<string, SymbolInfo> SymbolInfoByName { get; set; } = [];
         }
@@ -23,10 +24,10 @@ namespace Compiler.Parser
         public SymbolTable()
         {
             // Add the global scope
-            AddScope(scopeID: 0, "Global", parentScopeID: 0);
+            AddScope(scopeID: 0, "Global", isLocal: false, parentScopeID: 0);
         }
 
-        public void AddScope(uint scopeID, string name, uint parentScopeID)
+        public void AddScope(uint scopeID, string name, bool isLocal, uint parentScopeID)
         {
             if (scopeInfoByName.ContainsKey(scopeID)) throw new ArgumentException($"Scope with ID {scopeID} already exists!");
 
@@ -35,9 +36,10 @@ namespace Compiler.Parser
             if (scopeID != 0 && !scopeInfoByName.TryGetValue(parentScopeID, out parent))
                 throw new ArgumentException($"Parent scope with ID {parentScopeID} does not exist.");
 
-            scopeInfoByName[scopeID] = new ScopeInfo(scopeID, name, parent);
+            scopeInfoByName[scopeID] = new ScopeInfo(scopeID, name, isLocal, parent);
         }
-        public void AddSymbol(uint scopeID, int symbolID, string name, string type)
+
+        public void AddSymbol(uint scopeID, int symbolPosition, string name, string type)
         {
             if (!scopeInfoByName.TryGetValue(scopeID, out var scopeInfo))
                 throw new ArgumentException($"Scope with ID {scopeID} does not exist.");
@@ -45,7 +47,7 @@ namespace Compiler.Parser
             if (scopeInfo.SymbolInfoByName.ContainsKey(name))
                 throw new ArgumentException($"Symbol '{name}' already exists in scope {scopeID}.");
 
-            scopeInfo.SymbolInfoByName[name] = new SymbolInfo(scopeID, (uint)symbolID, name, type);
+            scopeInfo.SymbolInfoByName[name] = new SymbolInfo(scopeInfo, symbolPosition, name, type);
         }
 
         public bool ContainsSymbol(uint scopeID, string name)
@@ -53,7 +55,7 @@ namespace Compiler.Parser
         public bool TryGetSymbolInfo(uint scopeID, string name, [NotNullWhen(true)] out SymbolInfo? info)
         {
             info = null;
-            if (!scopeInfoByName.TryGetValue(scopeID, out var scopeInfo))  return false;
+            if (!scopeInfoByName.TryGetValue(scopeID, out var scopeInfo)) return false;
 
             foreach (var scope in GetScopeHierarchy(scopeInfo))
             {
@@ -77,10 +79,10 @@ namespace Compiler.Parser
             var result = new System.Text.StringBuilder();
             foreach (var scope in scopeInfoByName.Values)
             {
-                result.AppendLine($"Scope [{scope.ID}] {scope.Name} (Parent: {(scope.Parent != null ? $"[{scope.Parent.ID}] {scope.Parent.Name}" : "None")})");
+                result.AppendLine($"{(scope.IsLocal ? "Local" : string.Empty)} Scope [{scope.ID}] {scope.Name} (Parent: {(scope.Parent != null ? $"[{scope.Parent.ID}] {scope.Parent.Name}" : "None")})");
                 foreach (var symbol in scope.SymbolInfoByName.Values)
                 {
-                    result.AppendLine($"\tSymbol [{symbol.EnclosingScopeID}.{symbol.SymbolID}] {symbol.Name}:{symbol.Type}");
+                    result.AppendLine($"\tSymbol [{symbol.EnclosingScope.ID}.{symbol.SymbolPosition}] {symbol.Name}:{symbol.Type}");
                 }
             }
             return result.ToString();

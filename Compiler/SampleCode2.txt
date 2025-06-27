@@ -1,18 +1,32 @@
 namespace Program.ExtendedName
 {
+    let usesA:int32 = a;
     let a:i32 = 5;
 
     func main()
     {
+        let b:bool = true;
+
         while(true)
         {
-            let c:i32 = b - a - c;
+            let usesA_Again:i16 = a;
+            let a:i8 = 1000;
+            let this:will = fail;
+
+            while(false)
+            {
+                let throwaway1:i8 = 0;
+            }
+            while(false)
+            {
+                let throwaway2:i8 = 0;
+            }
+
+            let x:bool = x & b | notB;
         }
 
-        while(false)
-        {
-        }
+        let notB:bool = false;
     }
 
-    let b:i32 = 10;
+    let stores10:i32 = 10;
 }

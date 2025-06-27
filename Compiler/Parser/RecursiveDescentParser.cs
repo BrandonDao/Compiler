@@ -463,14 +463,13 @@ namespace Compiler.Parser
 
         public class VariableDefinitionNode : SyntaxNode
         {
-            public string Name { get; }
-            public string Type { get; }
+            public VariableNameTypeNode NameTypeNode { get; }
+            
             public SyntaxNode AssignedValue { get; }
             public VariableDefinitionNode(LetKeywordLeaf let, VariableNameTypeNode nameType, AssignmentOperatorLeaf equals, SyntaxNode value, SemicolonLeaf semicolon)
                 : base([let, nameType, equals, value, semicolon])
             {
-                Name = nameType.Name;
-                Type = nameType.Type;
+                NameTypeNode = nameType;
                 AssignedValue = value;
                 UpdateRange();
             }
@@ -547,8 +546,7 @@ namespace Compiler.Parser
         {
             public string Name => name.Name;
             public BlockNode Block => block;
-
-            public override SyntaxNode ToAST()
+                        public override SyntaxNode ToAST()
             {
                 Children.RemoveAt(0); // Remove the namespace keyword
                 Children[0] = Children[0].ToAST(); // Convert the qualified name to AST
@@ -559,11 +557,12 @@ namespace Compiler.Parser
 
         public class VariableNameTypeNode : SyntaxNode
         {
-            public string Name { get; }
+            public string Name => Identifier.Value;
             public string Type { get; }
+            public IdentifierLeaf Identifier { get; }
             public VariableNameTypeNode(IdentifierLeaf id, ColonLeaf colon, SyntaxNode type) : base([id, colon, type])
             {
-                Name = id.Value;
+                Identifier = id;
                 if (type is IdentifierLeaf idLeaf)
                 {
                     Type = idLeaf.Value;
