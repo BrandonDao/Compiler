@@ -1,5 +1,14 @@
 namespace CompilerLib.Parser.Nodes
 {
+    public static class PrimitiveTypes
+    {
+        public const string Int8 = "int8";
+        public const string Int16 = "int16";
+        public const string Int32 = "int32";
+        public const string Int64 = "int64";
+        public const string Bool = "bool";
+    }
+
     public abstract class PrimitiveLeaf(string value, int startLine, int startChar, int endLine, int endChar)
         : LeafNode(value, startLine, startChar, endLine, endChar)
     {
@@ -9,27 +18,27 @@ namespace CompilerLib.Parser.Nodes
     public class Int8Leaf(string value, int startLine, int startChar, int endLine, int endChar)
         : PrimitiveLeaf(value, startLine, startChar, endLine, endChar)
     {
-        public override string TypeName => "int8";
+        public override string TypeName => PrimitiveTypes.Int8;
     }
     public class Int16Leaf(string value, int startLine, int startChar, int endLine, int endChar)
         : PrimitiveLeaf(value, startLine, startChar, endLine, endChar)
     {
-        public override string TypeName => "int16";
+        public override string TypeName => PrimitiveTypes.Int16;
     }
     public class Int32Leaf(string value, int startLine, int startChar, int endLine, int endChar)
         : PrimitiveLeaf(value, startLine, startChar, endLine, endChar)
     {
-        public override string TypeName => "int32";
+        public override string TypeName => PrimitiveTypes.Int32;
     }
     public class Int64Leaf(string value, int startLine, int startChar, int endLine, int endChar)
         : PrimitiveLeaf(value, startLine, startChar, endLine, endChar)
     {
-        public override string TypeName => "int64";
+        public override string TypeName => PrimitiveTypes.Int64;
     }
     public class BoolLeaf(string value, int startLine, int startChar, int endLine, int endChar)
         : PrimitiveLeaf(value, startLine, startChar, endLine, endChar)
     {
-        public override string TypeName => "bool";
+        public override string TypeName => PrimitiveTypes.Bool;
     }
 
 

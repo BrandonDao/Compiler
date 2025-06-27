@@ -20,8 +20,18 @@ namespace Compiler.Parser
             return this;
         }
     }
-    public abstract class LowPrecedenceOperationNode(List<SyntaxNode> children) : ValueOperationNode(children);
-    public abstract class HighPrecedenceOperationNode(List<SyntaxNode> children) : ValueOperationNode(children);
+    public abstract class UnaryOperationNode(List<SyntaxNode> children) : ValueOperationNode(children)
+    {
+        public SyntaxNode Operand { get; } = children[1];
+    }
+    public abstract class BinaryOperationNode(List<SyntaxNode> children, string operatorToDisplay) : ValueOperationNode(children)
+    {
+        public SyntaxNode LeftOperand => Children[0];
+        public  SyntaxNode RightOperand => Children[1];
+        public string Operator { get; } = operatorToDisplay;
+    }
+    public abstract class LowPrecedenceOperationNode(List<SyntaxNode> children, string operatorToDisplay) : BinaryOperationNode(children, operatorToDisplay);
+    public abstract class HighPrecedenceOperationNode(List<SyntaxNode> children, string operatorToDisplay) : BinaryOperationNode(children, operatorToDisplay);
 
     public class ParenthesizedExpression(OpenParenthesisLeaf open, SyntaxNode expr, CloseParenthesisLeaf close)
         : ValueOperationNode([open, expr, close])
@@ -32,15 +42,13 @@ namespace Compiler.Parser
         }
     }
 
+    public class MultiplyOperationNode(List<SyntaxNode> children) : HighPrecedenceOperationNode(children, "*");
+    public class DivideOperationNode(List<SyntaxNode> children) : HighPrecedenceOperationNode(children, "/");
+    public class ModOperationNode(List<SyntaxNode> children) : HighPrecedenceOperationNode(children, "%");
+    public class AddOperationNode(List<SyntaxNode> children) : LowPrecedenceOperationNode(children, "+");
+    public class SubtractOperationNode(List<SyntaxNode> children) : LowPrecedenceOperationNode(children, "-");
 
-    public class MultiplyOperationNode(List<SyntaxNode> children) : HighPrecedenceOperationNode(children);
-    public class DivideOperationNode(List<SyntaxNode> children) : HighPrecedenceOperationNode(children);
-    public class ModOperationNode(List<SyntaxNode> children) : HighPrecedenceOperationNode(children);
-    public class AddOperationNode(List<SyntaxNode> children) : LowPrecedenceOperationNode(children);
-    public class SubtractOperationNode(List<SyntaxNode> children) : LowPrecedenceOperationNode(children);
-
-
-    public class NotOperationNode(List<SyntaxNode> children) : ValueOperationNode(children)
+    public class NotOperationNode(List<SyntaxNode> children) : UnaryOperationNode(children)
     {
         public override SyntaxNode ToAST()
         {
@@ -53,7 +61,7 @@ namespace Compiler.Parser
             return this;
         }
     }
-    public class OrOperationNode(List<SyntaxNode> children) : LowPrecedenceOperationNode(children);
-    public class AndOperationNode(List<SyntaxNode> children) : LowPrecedenceOperationNode(children);
-    public class EqualityOperationNode(List<SyntaxNode> children) : LowPrecedenceOperationNode(children);
+    public class OrOperationNode(List<SyntaxNode> children) : LowPrecedenceOperationNode(children, "|");
+    public class AndOperationNode(List<SyntaxNode> children) : LowPrecedenceOperationNode(children, "&");
+    public class EqualityOperationNode(List<SyntaxNode> children) : LowPrecedenceOperationNode(children, "==");
 }
