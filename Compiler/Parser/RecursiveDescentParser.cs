@@ -52,40 +52,18 @@ namespace Compiler.Parser
 
 
 
-        private static SyntaxNode ParseType(List<LeafNode> tokens, ref int position)
+        private static TypeLeafNode ParseType(List<LeafNode> tokens, ref int position)
         {
-            if (tokens[position] is IdentifierLeaf idToken)
+            switch (tokens[position])
             {
-                position++;
-                return idToken;
+                case IdentifierLeaf idToken: position++; return idToken;
+                case Int8Leaf int8Token: position++; return int8Token;
+                case Int16Leaf int16Token: position++; return int16Token;
+                case Int32Leaf int32Token: position++; return int32Token;
+                case Int64Leaf int64Token: position++; return int64Token;
+                case BoolLeaf boolToken: position++; return boolToken;
+                default: throw new ArgumentException($"Expected an identifier or primitive type, not {tokens[position]}!");
             }
-            if (tokens[position] is Int8Leaf int8Token)
-            {
-                position++;
-                return int8Token;
-            }
-            if (tokens[position] is Int16Leaf int16Token)
-            {
-                position++;
-                return int16Token;
-            }
-            if (tokens[position] is Int32Leaf int32Token)
-            {
-                position++;
-                return int32Token;
-            }
-            if (tokens[position] is Int64Leaf int64Token)
-            {
-                position++;
-                return int64Token;
-            }
-            if (tokens[position] is BoolLeaf boolToken)
-            {
-                position++;
-                return boolToken;
-            }
-
-            throw new ArgumentException($"Expected an identifier or primitive type, not {tokens[position]}!");
         }
 
         private static VariableDefinitionNode ParseVariableDefinition(List<LeafNode> tokens, ref int position)
@@ -230,6 +208,13 @@ namespace Compiler.Parser
 
                     case IdentifierLeaf idToken:
                         position++;
+
+                        if (tokens[position] is OpenParenthesisLeaf openParen)
+                        {
+                            position++;
+                            var funcCall = ParseFuncCallExpr(tokens, ref position, openParen, idToken);
+                            return funcCall;
+                        }
                         return idToken;
 
                     case IntLiteralLeaf litToken:
@@ -261,6 +246,39 @@ namespace Compiler.Parser
                 return node;
             }
         }
+        private static FunctionCallExpressionNode ParseFuncCallExpr(List<LeafNode> tokens, ref int position, OpenParenthesisLeaf openParen, IdentifierLeaf idToken)
+        {
+            var argumentList = ParseArgumentList(tokens, ref position, openParen);
+            return new FunctionCallExpressionNode(idToken, argumentList);
+        }
+        private static ArgumentListNode ParseArgumentList(List<LeafNode> tokens, ref int position, OpenParenthesisLeaf openParen)
+        {
+            if (tokens[position] is CloseParenthesisLeaf earlyCloseParen)
+            {
+                position++;
+                return new ArgumentListNode(openParen, earlyCloseParen);
+            }
+
+            List<SyntaxNode> arguments = [];
+            while (true)
+            {
+                var arg = ParseValueExpression(tokens, ref position);
+                arguments.Add(arg);
+
+                if (tokens[position] is CommaLeaf commaToken)
+                {
+                    position++;
+                    arguments.Add(commaToken);
+                }
+                else if (tokens[position] is CloseParenthesisLeaf closeParen)
+                {
+                    position++;
+                    return new ArgumentListNode(openParen, arguments, closeParen);
+                }
+                else throw new ArgumentException($"Expected ',' or ')' in argument list, not {tokens[position]}!");
+            }
+        }
+
 
         private static FunctionDefinitionNode ParseFunctionDefinition(List<LeafNode> tokens, ref int position)
         {
@@ -290,20 +308,18 @@ namespace Compiler.Parser
             }
             position++;
 
-            SyntaxNode returnType;
             if (tokens[position] is VoidLeaf voidLeaf)
             {
-                returnType = voidLeaf;
                 position++;
+                var body = ParseStatementBlock(tokens, ref position);
+                return new FunctionDefinitionNode(funcKeywordLeaf, idToken, parameterList, arrowToken, voidLeaf, body);
             }
             else
             {
-                returnType = ParseType(tokens, ref position);
+                var returnType = ParseType(tokens, ref position);
+                var body = ParseStatementBlock(tokens, ref position);
+                return new FunctionDefinitionNode(funcKeywordLeaf, idToken, parameterList, arrowToken, returnType, body);
             }
-
-            var body = ParseStatementBlock(tokens, ref position);
-
-            return new FunctionDefinitionNode(funcKeywordLeaf, idToken, parameterList, arrowToken, returnType, body);
         }
         private static ParameterListNode ParseParameterList(List<LeafNode> tokens, ref int position)
         {
@@ -405,6 +421,32 @@ namespace Compiler.Parser
                 {
                     statements.Add(ParseWhileStatement(tokens, ref position));
                 }
+                else if (tokens[position] is IdentifierLeaf identifier)
+                {
+                    position++;
+                    if (tokens[position] is OpenParenthesisLeaf openParen)
+                    {
+                        position++;
+                        FunctionCallExpressionNode funcCallExpr = ParseFuncCallExpr(tokens, ref position, openParen, identifier);
+
+                        if (tokens[position] is not SemicolonLeaf semicolon) throw new ArgumentException($"Unexpected token after function call statement: {tokens[position]}!");
+
+                        position++;
+                        statements.Add(new FunctionCallStatementNode(funcCallExpr, semicolon));
+                    }
+                    else if (tokens[position] is AssignmentOperatorLeaf assignmentOp)
+                    {
+                        position++;
+                        SyntaxNode assignedValue = ParseValueExpression(tokens, ref position);
+
+                        if (tokens[position] is not SemicolonLeaf semicolon)
+                            throw new ArgumentException($"Expected ';' token at the end of assignment statement, not {tokens[position]}!");
+
+                        position++;
+                        statements.Add(new AssignmentStatement(identifier, assignmentOp, assignedValue, semicolon));
+                    }
+                    else throw new ArgumentException($"Unexpected token after identifier in statement: {tokens[position]}!");
+                }
                 else if (tokens[position] is OpenBraceLeaf)
                 {
                     statements.Add(ParseStatementBlock(tokens, ref position));
@@ -420,10 +462,7 @@ namespace Compiler.Parser
                     closeBraceLeaf = leaf;
                     break;
                 }
-                else
-                {
-                    throw new ArgumentException($"Unexpected token in block: {tokens[position]}!");
-                }
+                else throw new ArgumentException($"Unexpected token in block: {tokens[position]}!");
             }
             return new BlockNode(openBraceToken, statements, closeBraceLeaf);
         }
@@ -461,10 +500,78 @@ namespace Compiler.Parser
             return new BlockNode(openBraceToken, statements, closeBraceLeaf);
         }
 
+
+        public class FunctionCallStatementNode : SyntaxNode
+        {
+            public FunctionCallExpressionNode FunctionCallExpression { get; }
+            public FunctionCallStatementNode(FunctionCallExpressionNode funcCallExpr, SemicolonLeaf semicolon)
+                : base([funcCallExpr, semicolon])
+            {
+                FunctionCallExpression = funcCallExpr;
+                UpdateRange();
+            }
+            public override SyntaxNode ToAST()
+            {
+                Children.RemoveAt(1); // Remove the semicolon
+                Children[0] = Children[0].ToAST(); // Convert the function call expression to AST
+                return this;
+            }
+        }
+        public class FunctionCallExpressionNode : SyntaxNode
+        {
+            public IdentifierLeaf Identifier { get; }
+            public ArgumentListNode ArgumentList { get; }
+
+            public FunctionCallExpressionNode(IdentifierLeaf id, ArgumentListNode args)
+                : base([id, args])
+            {
+                Identifier = id;
+                ArgumentList = args;
+                UpdateRange();
+            }
+
+            public override SyntaxNode ToAST()
+            {
+                for (int i = 0; i < Children.Count; i++)
+                {
+                    Children[i] = Children[i].ToAST();
+                }
+                return this;
+            }
+        }
+        public class ArgumentListNode : SyntaxNode
+        {
+            private static List<SyntaxNode> EmptyArgs { get; } = [];
+            public ArgumentListNode(OpenParenthesisLeaf openParen, List<SyntaxNode> arguments, CloseParenthesisLeaf closeParen)
+                : base([openParen, .. arguments, closeParen])
+            {
+                UpdateRange();
+            }
+            public ArgumentListNode(OpenParenthesisLeaf openParen, CloseParenthesisLeaf closeParen)
+                : this(openParen, EmptyArgs, closeParen) { }
+
+            public override SyntaxNode ToAST()
+            {
+                Children.RemoveAt(Children.Count - 1); // Remove the close parenthesis
+                Children.RemoveAt(0); // Remove the open parenthesis
+                for (int i = 0; i < Children.Count; i++)
+                {
+                    if (Children[i] is CommaLeaf)
+                    {
+                        Children.RemoveAt(i);
+                        i--;
+                        continue;
+                    }
+                    Children[i] = Children[i].ToAST();
+                }
+                return this;
+            }
+        }
+
         public class VariableDefinitionNode : SyntaxNode
         {
             public VariableNameTypeNode NameTypeNode { get; }
-            
+
             public SyntaxNode AssignedValue { get; }
             public VariableDefinitionNode(LetKeywordLeaf let, VariableNameTypeNode nameType, AssignmentOperatorLeaf equals, SyntaxNode value, SemicolonLeaf semicolon)
                 : base([let, nameType, equals, value, semicolon])
@@ -546,7 +653,7 @@ namespace Compiler.Parser
         {
             public string Name => name.Name;
             public BlockNode Block => block;
-                        public override SyntaxNode ToAST()
+            public override SyntaxNode ToAST()
             {
                 Children.RemoveAt(0); // Remove the namespace keyword
                 Children[0] = Children[0].ToAST(); // Convert the qualified name to AST
@@ -588,17 +695,49 @@ namespace Compiler.Parser
             }
         }
 
+        public class AssignmentStatement : SyntaxNode
+        {
+            public IdentifierLeaf Identifier { get; }
+            public SyntaxNode AssignedValue { get; }
+
+            public AssignmentStatement(IdentifierLeaf id, AssignmentOperatorLeaf equals, SyntaxNode value, SemicolonLeaf semicolon)
+                : base([id, equals, value, semicolon])
+            {
+                Identifier = id;
+                AssignedValue = value;
+                UpdateRange();
+            }
+
+            public override SyntaxNode ToAST()
+            {
+                Children.RemoveAt(3); // Remove the semicolon
+                Children.RemoveAt(1); // Remove the assignment operator
+                for (int i = 0; i < Children.Count; i++)
+                {
+                    Children[i] = Children[i].ToAST();
+                }
+                return this;
+            }
+        }
+
         public class FunctionDefinitionNode : SyntaxNode, IContainsScopeNode
         {
             public string Name { get; }
             public BlockNode Block { get; }
-            public FunctionDefinitionNode(FunctionKeywordLeaf func, IdentifierLeaf id, ParameterListNode parameterList, SyntaxNode arrow, SyntaxNode returnType, BlockNode body)
-                : base([func, id, parameterList, arrow, returnType, body])
+            public string ReturnTypeName { get; }
+            private FunctionDefinitionNode(FunctionKeywordLeaf func, IdentifierLeaf id, ParameterListNode parameterList, SyntaxNode arrow, LeafNode returnTypeNode, string returnTypeName, BlockNode body)
+                : base([func, id, parameterList, arrow, returnTypeNode, body])
             {
                 Name = id.Value;
                 Block = body;
+                ReturnTypeName = returnTypeName;
                 UpdateRange();
             }
+
+            public FunctionDefinitionNode(FunctionKeywordLeaf func, IdentifierLeaf id, ParameterListNode parameterList, SyntaxNode arrow, TypeLeafNode returnType, BlockNode body)
+                : this(func, id, parameterList, arrow, returnType, returnType.TypeName, body) { }
+            public FunctionDefinitionNode(FunctionKeywordLeaf func, IdentifierLeaf id, ParameterListNode parameterList, SyntaxNode arrow, VoidLeaf voidReturnType, BlockNode body)
+                : this(func, id, parameterList, arrow, voidReturnType, "void", body) { }
 
             public override SyntaxNode ToAST()
             {
@@ -642,6 +781,7 @@ namespace Compiler.Parser
         public class WhileStatementNode : SyntaxNode, IContainsScopeNode
         {
             public string Name => "While Loop";
+            public SyntaxNode Condition => Children[0];
             public BlockNode Block { get; }
             public WhileStatementNode(WhileKeywordLeaf whileKeyword, SyntaxNode condition, BlockNode body)
                 : base([whileKeyword, condition, body])
@@ -653,7 +793,8 @@ namespace Compiler.Parser
             public override SyntaxNode ToAST()
             {
                 Children.RemoveAt(0); // Remove the while keyword
-                Children[1] = Children[1].ToAST(); // Convert the condition to AST
+                Children[0] = Children[0].ToAST(); // Convert the condition to AST
+                Children[1] = Children[1].ToAST(); // Convert the body
                 return this;
             }
         }

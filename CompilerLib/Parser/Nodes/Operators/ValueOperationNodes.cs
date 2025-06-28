@@ -1,7 +1,6 @@
-using CompilerLib.Parser.Nodes;
 using CompilerLib.Parser.Nodes.Punctuation;
 
-namespace Compiler.Parser
+namespace CompilerLib.Parser.Nodes.Operators
 {
     public abstract class ValueOperationNode : SyntaxNode
     {

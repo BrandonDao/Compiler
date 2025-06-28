@@ -32,7 +32,7 @@ HighLevelBlockItem  : NamespaceDef | FunctionDef | VarDefStatement;
 
 StatementBlock      : _OpenBrace StatementBlockItem StatementBlockRest _CloseBrace;
 StatementBlockRest  : StatementBlock | EMPTY;
-StatementBlockItem  : VarDefStatement | WhileStatement | StatementBlock | EmptyStatement;
+StatementBlockItem  : VarDefStatement | AssignmentOrFuncCallStatement | WhileStatement | StatementBlock | EmptyStatement;
 EmptyStatement      : _Semicolon;
 
 # Variables
@@ -48,12 +48,14 @@ LowExprRest     : LowExprOp ValueExpr | EMPTY;
 LowExprOp       : _OpAdd | _OpNegate | _OpOr | _OpAnd | _OpEquality;
 HighExprOp      : _OpMultiply | _OpDivide | _OpMod;
 
-ValueTerm       : _OpNot ValueTerm
-                | _OpenParen ValueExpr _CloseParen
-                | _LiteralBool
-                | _LiteralInt
-                | _Id
-                ;
+ValueTerm           : _OpNot ValueTerm
+                    | _OpenParen ValueExpr _CloseParen
+                    | _LiteralBool
+                    | _LiteralInt
+                    | IdOrFuncCall
+                    ;
+IdOrFuncCall        : _Id IdOrFuncCallRest; # Need to parse as either ID or FuncCallExpr depending on production
+IdOrFuncCallRest    : ParamList | EMPTY;
 
 # Functions
 FunctionDef     : _Func _Id  ParamList ReturnTypeDef StatementBlock;
@@ -63,10 +65,16 @@ ParamListRest   : _Comma ParamListStart     | EMPTY;
 ReturnTypeDef   : _SmallArrow ReturnType    | EMPTY*; # If EMPTY: Assumed to be void
 ReturnType      : _Void | Type;
 
-# FunctionCall        : _Id ArgumentList _Semicolon;
-# ArgumentList        : _OpenParen ArgumentListStart _CloseParen;
-# ArgumentListStart   : 
-# Argument            : Literal | FunctionCall | 
+FuncCallExpr        : _Id ArgumentList;
+ArgumentList        : _OpenParen ArgumentListStart _CloseParen;
+ArgumentListStart   : Argument ArgumentListRest | EMPTY;
+ArgumentListRest    : _Comma Argument ArgumentListRest | EMPTY;
+Argument            : ValueExpr;
+
+
+# Statements 
+AssignmentOrFuncCallStatement       : _Id AssignmentOrFuncCallStatementRest _Semicolon;
+AssignmentOrFuncCallStatementRest   : ArgumentList | _OpAssign ValueExpr;
 
 # Control Statements
 WhileStatement  : _While ValueExpr StatementBlock;

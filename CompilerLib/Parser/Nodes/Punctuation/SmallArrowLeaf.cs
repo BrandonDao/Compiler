@@ -7,5 +7,12 @@ namespace CompilerLib.Parser.Nodes.Punctuation
     }
 
     public class ImplicitSmallArrowLeaf(int startLine, int startChar)
-        : ImplicitNode("->", startLine, startChar);
+        : SmallArrowLeaf("->", startLine, startChar, startLine, startChar)
+    {
+        public override string GetPrintable(int indent)
+        {
+            var indentString = new string(' ', indent);
+            return $"[{StartLine}.{StartChar}]\t\t{indentString}{GetType().Name}\n";
+        }
+    }
 }

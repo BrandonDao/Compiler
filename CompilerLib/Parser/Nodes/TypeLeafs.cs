@@ -9,11 +9,13 @@ namespace CompilerLib.Parser.Nodes
         public const string Bool = "bool";
     }
 
-    public abstract class PrimitiveLeaf(string value, int startLine, int startChar, int endLine, int endChar)
+    public abstract class TypeLeafNode(string value, int startLine, int startChar, int endLine, int endChar)
         : LeafNode(value, startLine, startChar, endLine, endChar)
     {
         public abstract string TypeName { get; }
     }
+    public abstract class PrimitiveLeaf(string value, int startLine, int startChar, int endLine, int endChar)
+        : TypeLeafNode(value, startLine, startChar, endLine, endChar);
 
     public class Int8Leaf(string value, int startLine, int startChar, int endLine, int endChar)
         : PrimitiveLeaf(value, startLine, startChar, endLine, endChar)
@@ -43,5 +45,8 @@ namespace CompilerLib.Parser.Nodes
 
 
     public class IdentifierLeaf(string value, int startLine, int startChar, int endLine, int endChar)
-        : LeafNode(value, startLine, startChar, endLine, endChar);
+        : TypeLeafNode(value, startLine, startChar, endLine, endChar)
+    {
+        public override string TypeName { get; } = value;
+    }
 }

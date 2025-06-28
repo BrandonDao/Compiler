@@ -79,7 +79,7 @@ namespace Compiler
 
             var missing = nodeTypes.Except(tokenDefinitions.Select(def => def.NodeFactory(string.Empty, 0, 0, 0, 0).GetType()));
 
-            if (missing.Any(t => !t.IsSubclassOf(typeof(ImplicitNode)))) throw new InvalidOperationException($"Some token types are missing definitions: {string.Join(", ", missing)}");
+            if (missing.Any(t => !t.Name.Contains("Implicit"))) throw new InvalidOperationException($"Some token types are missing definitions: {string.Join(", ", missing)}");
 #endif
 
             StringBuilder errorMessageBuilder = new("Unexpected characters found!\n");

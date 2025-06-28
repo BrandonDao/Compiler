@@ -1,32 +1,28 @@
 namespace Program.ExtendedName
 {
-    let usesA:int32 = a;
-    let a:i32 = 5;
-
     func main()
     {
-        let b:bool = true;
+        let a:i32 = 0;
+        a = 5;
+        
+        let outOfScope:bool = false;
 
-        while(true)
+        inScope = false;
         {
-            let usesA_Again:i16 = a;
-            let a:i8 = 1000;
-            let this:will = fail;
-
-            while(false)
-            {
-                let throwaway1:i8 = 0;
-            }
-            while(false)
-            {
-                let throwaway2:i8 = 0;
-            }
-
-            let x:bool = x & b | notB;
+            let inScope:bool = true;
+            outOfScope = true;
         }
+        inScope = feaiodknl();
+        outOfScope = false;
 
-        let notB:bool = false;
+        let b:i32 = 0;
+        b = a - 3 - returnsSelf(returnsSelf(2, inScope | true));
+
+        c = 0;
+        let c:i32 = 0;
     }
 
-    let stores10:i32 = 10;
+    func returnsSelf(self:i32, throwaway:bool) -> i32
+    {
+    }
 }
