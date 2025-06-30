@@ -1,0 +1,9 @@
+namespace Program.ExtendedName
+{
+    func main()
+    {
+        let two: i32 = 2;
+
+        let five:i32 = two + 3;
+    }
+}

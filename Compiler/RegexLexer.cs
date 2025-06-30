@@ -5,6 +5,9 @@ using CompilerLib.Parser.Nodes;
 using System.Text;
 using CompilerLib.Parser.Nodes.Operators;
 using CompilerLib.Parser.Nodes.Punctuation;
+using CompilerLib.Parser.Nodes.Statements.Controls;
+using CompilerLib.Parser.Nodes.Scopes;
+using CompilerLib.Parser.Nodes.Types;
 
 namespace Compiler
 {

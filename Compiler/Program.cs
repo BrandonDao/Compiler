@@ -9,10 +9,10 @@ namespace Compiler
         {
             RegexLexer lexer = new();
 
-            const string codeFilePath = "SampleCode2.txt";
+            const string relativeCodeFilePath = @"SampleCode\SampleCode2.txt";
             var tokens = lexer.TokenizeFile(
 #if DEBUG
-                filePath: Path.Combine("..", "..", "..", codeFilePath),
+                filePath: Path.Combine("..", "..", "..", relativeCodeFilePath),
 #else
                 filePath: codeFilePath,
 #endif

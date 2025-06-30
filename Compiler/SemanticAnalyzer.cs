@@ -1,10 +1,16 @@
 using System.Text;
+using Compiler.Parser;
 using CompilerLib.Parser.Nodes;
+using CompilerLib.Parser.Nodes.Functions;
 using CompilerLib.Parser.Nodes.Operators;
+using CompilerLib.Parser.Nodes.Scopes;
+using CompilerLib.Parser.Nodes.Statements;
+using CompilerLib.Parser.Nodes.Statements.Controls;
+using CompilerLib.Parser.Nodes.Types;
 using static Compiler.Parser.RecursiveDescentParser;
 using static Compiler.Parser.SymbolTable;
 
-namespace Compiler.Parser
+namespace Compiler
 {
     public class SemanticAnalyzer
     {
@@ -86,7 +92,7 @@ namespace Compiler.Parser
                     {
                         if (symbolTable.TryGetSymbolInfo(currentScopeID, varDefNode.NameTypeNode.Name, out var symbolInfo))
                         {
-                            if (!isLocal || (isLocal && symbolInfo.EnclosingScope.IsLocal))
+                            if (!isLocal || isLocal && symbolInfo.EnclosingScope.IsLocal)
                             {
                                 hasFailed = true;
                                 messageSB.AppendLine($"\t[{varDefNode.StartLine}.{varDefNode.StartChar}-{varDefNode.EndLine}.{varDefNode.EndChar}] "
@@ -201,7 +207,7 @@ namespace Compiler.Parser
                         uint scopeID = scopeContainer.Block.ID;
                         ValidateScopesAndTypes(scopeContainer.Block, scopeID, statementPosition, isLocal);
                     }
-                    else if (child is AssignmentStatement assignment)
+                    else if (child is AssignmentStatementNode assignment)
                     {
                         if (TryValidateAssignmentOrFuncCallScope(assignment, currentScopeID, statementPosition))
                         {
@@ -301,7 +307,7 @@ namespace Compiler.Parser
                         + $"Cannot assign type of '{assignmentRHS}' to variable {node.NameTypeNode.Name} of type '{node.NameTypeNode.Type}'");
                 }
             }
-            void ValidateAssignment(AssignmentStatement node, uint currentScopeID, StringBuilder messageSB)
+            void ValidateAssignment(AssignmentStatementNode node, uint currentScopeID, StringBuilder messageSB)
             {
                 if (!symbolTable.TryGetSymbolInfo(currentScopeID, node.Identifier.Value, out SymbolInfo? info))
                 {

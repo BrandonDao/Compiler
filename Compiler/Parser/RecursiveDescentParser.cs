@@ -1,11 +1,15 @@
-using System.Text;
 using CompilerLib.Parser.Nodes;
+using CompilerLib.Parser.Nodes.Functions;
 using CompilerLib.Parser.Nodes.Operators;
 using CompilerLib.Parser.Nodes.Punctuation;
+using CompilerLib.Parser.Nodes.Scopes;
+using CompilerLib.Parser.Nodes.Statements;
+using CompilerLib.Parser.Nodes.Statements.Controls;
+using CompilerLib.Parser.Nodes.Types;
 
 namespace Compiler.Parser
 {
-    public class RecursiveDescentParser : IParser
+    public partial class RecursiveDescentParser : IParser
     {
         public static RecursiveDescentParser Instance { get; private set; } = new();
 
@@ -20,7 +24,7 @@ namespace Compiler.Parser
             return ParseNamespaceDefinition(tokens, ref position);
         }
 
-        public SyntaxNode ToAST(SyntaxNode root) => new ParserEntrypoint(root.ToAST());
+        public SyntaxNode ToAST(SyntaxNode root) => new ParserEntrypointNode(root.ToAST());
 
         private static List<LeafNode> HangWhitespace(List<LeafNode> tokens)
         {
@@ -443,7 +447,7 @@ namespace Compiler.Parser
                             throw new ArgumentException($"Expected ';' token at the end of assignment statement, not {tokens[position]}!");
 
                         position++;
-                        statements.Add(new AssignmentStatement(identifier, assignmentOp, assignedValue, semicolon));
+                        statements.Add(new AssignmentStatementNode(identifier, assignmentOp, assignedValue, semicolon));
                     }
                     else throw new ArgumentException($"Unexpected token after identifier in statement: {tokens[position]}!");
                 }
@@ -454,7 +458,7 @@ namespace Compiler.Parser
                 else if (tokens[position] is SemicolonLeaf semicolon)
                 {
                     position++;
-                    statements.Add(new EmptyStatement(semicolon));
+                    statements.Add(new EmptyStatementNode(semicolon));
                 }
                 else if (tokens[position] is CloseBraceLeaf leaf)
                 {
@@ -498,360 +502,6 @@ namespace Compiler.Parser
                 else throw new ArgumentException($"Unexpected token in block: {tokens[position]}!");
             }
             return new BlockNode(openBraceToken, statements, closeBraceLeaf);
-        }
-
-
-        public class FunctionCallStatementNode : SyntaxNode
-        {
-            public FunctionCallExpressionNode FunctionCallExpression { get; }
-            public FunctionCallStatementNode(FunctionCallExpressionNode funcCallExpr, SemicolonLeaf semicolon)
-                : base([funcCallExpr, semicolon])
-            {
-                FunctionCallExpression = funcCallExpr;
-                UpdateRange();
-            }
-            public override SyntaxNode ToAST()
-            {
-                Children.RemoveAt(1); // Remove the semicolon
-                Children[0] = Children[0].ToAST(); // Convert the function call expression to AST
-                return this;
-            }
-        }
-        public class FunctionCallExpressionNode : SyntaxNode
-        {
-            public IdentifierLeaf Identifier { get; }
-            public ArgumentListNode ArgumentList { get; }
-
-            public FunctionCallExpressionNode(IdentifierLeaf id, ArgumentListNode args)
-                : base([id, args])
-            {
-                Identifier = id;
-                ArgumentList = args;
-                UpdateRange();
-            }
-
-            public override SyntaxNode ToAST()
-            {
-                for (int i = 0; i < Children.Count; i++)
-                {
-                    Children[i] = Children[i].ToAST();
-                }
-                return this;
-            }
-        }
-        public class ArgumentListNode : SyntaxNode
-        {
-            private static List<SyntaxNode> EmptyArgs { get; } = [];
-            public ArgumentListNode(OpenParenthesisLeaf openParen, List<SyntaxNode> arguments, CloseParenthesisLeaf closeParen)
-                : base([openParen, .. arguments, closeParen])
-            {
-                UpdateRange();
-            }
-            public ArgumentListNode(OpenParenthesisLeaf openParen, CloseParenthesisLeaf closeParen)
-                : this(openParen, EmptyArgs, closeParen) { }
-
-            public override SyntaxNode ToAST()
-            {
-                Children.RemoveAt(Children.Count - 1); // Remove the close parenthesis
-                Children.RemoveAt(0); // Remove the open parenthesis
-                for (int i = 0; i < Children.Count; i++)
-                {
-                    if (Children[i] is CommaLeaf)
-                    {
-                        Children.RemoveAt(i);
-                        i--;
-                        continue;
-                    }
-                    Children[i] = Children[i].ToAST();
-                }
-                return this;
-            }
-        }
-
-        public class VariableDefinitionNode : SyntaxNode
-        {
-            public VariableNameTypeNode NameTypeNode { get; }
-
-            public SyntaxNode AssignedValue { get; }
-            public VariableDefinitionNode(LetKeywordLeaf let, VariableNameTypeNode nameType, AssignmentOperatorLeaf equals, SyntaxNode value, SemicolonLeaf semicolon)
-                : base([let, nameType, equals, value, semicolon])
-            {
-                NameTypeNode = nameType;
-                AssignedValue = value;
-                UpdateRange();
-            }
-
-            public override SyntaxNode ToAST()
-            {
-                Children.RemoveAt(4); // Remove the semicolon
-                Children.RemoveAt(2); // Remove the assignment operator
-                Children.RemoveAt(0); // Remove the let keyword
-                for (int i = 0; i < Children.Count; i++)
-                {
-                    Children[i] = Children[i].ToAST();
-                }
-                return this;
-            }
-        }
-
-        public interface IContainsScopeNode : IHasChildren
-        {
-            public string Name { get; }
-            public BlockNode Block { get; }
-        }
-
-        public class QualifiedNameNode : SyntaxNode
-        {
-            public string Name { get; set; }
-            private readonly List<SyntaxNode> trimmedChildren;
-
-            public QualifiedNameNode(List<SyntaxNode> children) : base(children)
-            {
-                trimmedChildren = new List<SyntaxNode>(capacity: children.Count);
-
-                if (children.Count == 0 || children[0] is not IdentifierLeaf startIdLeaf)
-                    throw new ArgumentException("QualifiedNameNode must start with an IdentifierLeaf!");
-
-                StringBuilder nameBuilder = new(startIdLeaf.Value);
-                for (int i = 1; i < children.Count; i++)
-                {
-                    SyntaxNode? child = children[i];
-                    if (child is IdentifierLeaf idLeaf)
-                    {
-                        nameBuilder.Append('.');
-                        nameBuilder.Append(idLeaf.Value);
-                        trimmedChildren.Add(idLeaf);
-                    }
-                }
-                Name = nameBuilder.ToString();
-            }
-
-            public override SyntaxNode ToAST()
-            {
-                Children = trimmedChildren;
-                for (int i = 0; i < Children.Count; i++)
-                {
-                    Children[i] = Children[i].ToAST();
-                }
-                return this;
-            }
-
-            public override string GetPrintable(int indent = 0)
-            {
-                var indentString = new string(' ', indent);
-                StringBuilder builder = new();
-                builder.Append($"[{StartLine}.{StartChar} - {EndLine}.{EndChar}]\t{indentString}{GetType().Name} Name: {Name}\n");
-                foreach (var child in Children)
-                {
-                    builder.Append(child.GetPrintable(indent + 4));
-                }
-                return builder.ToString();
-            }
-        }
-        public class NamespaceDefinitionNode(NamespaceKeywordLeaf namespaceKeyword, QualifiedNameNode name, BlockNode block)
-            : SyntaxNode([namespaceKeyword, name, block]), IContainsScopeNode
-        {
-            public string Name => name.Name;
-            public BlockNode Block => block;
-            public override SyntaxNode ToAST()
-            {
-                Children.RemoveAt(0); // Remove the namespace keyword
-                Children[0] = Children[0].ToAST(); // Convert the qualified name to AST
-                Children[1] = Children[1].ToAST(); // Convert the block to AST
-                return this;
-            }
-        }
-
-        public class VariableNameTypeNode : SyntaxNode
-        {
-            public string Name => Identifier.Value;
-            public string Type { get; }
-            public IdentifierLeaf Identifier { get; }
-            public VariableNameTypeNode(IdentifierLeaf id, ColonLeaf colon, SyntaxNode type) : base([id, colon, type])
-            {
-                Identifier = id;
-                if (type is IdentifierLeaf idLeaf)
-                {
-                    Type = idLeaf.Value;
-                }
-                else if (type is PrimitiveLeaf primitiveLeaf)
-                {
-                    Type = primitiveLeaf.TypeName;
-                }
-                else
-                    throw new ArgumentException($"Expected an identifier or primitive type, not {type}!");
-
-                UpdateRange();
-            }
-
-            public override SyntaxNode ToAST()
-            {
-                Children.RemoveAt(1); // Remove the colon
-                for (int i = 0; i < Children.Count; i++)
-                {
-                    Children[i] = Children[i].ToAST();
-                }
-                return this;
-            }
-        }
-
-        public class AssignmentStatement : SyntaxNode
-        {
-            public IdentifierLeaf Identifier { get; }
-            public SyntaxNode AssignedValue { get; }
-
-            public AssignmentStatement(IdentifierLeaf id, AssignmentOperatorLeaf equals, SyntaxNode value, SemicolonLeaf semicolon)
-                : base([id, equals, value, semicolon])
-            {
-                Identifier = id;
-                AssignedValue = value;
-                UpdateRange();
-            }
-
-            public override SyntaxNode ToAST()
-            {
-                Children.RemoveAt(3); // Remove the semicolon
-                Children.RemoveAt(1); // Remove the assignment operator
-                for (int i = 0; i < Children.Count; i++)
-                {
-                    Children[i] = Children[i].ToAST();
-                }
-                return this;
-            }
-        }
-
-        public class FunctionDefinitionNode : SyntaxNode, IContainsScopeNode
-        {
-            public string Name { get; }
-            public BlockNode Block { get; }
-            public string ReturnTypeName { get; }
-            private FunctionDefinitionNode(FunctionKeywordLeaf func, IdentifierLeaf id, ParameterListNode parameterList, SyntaxNode arrow, LeafNode returnTypeNode, string returnTypeName, BlockNode body)
-                : base([func, id, parameterList, arrow, returnTypeNode, body])
-            {
-                Name = id.Value;
-                Block = body;
-                ReturnTypeName = returnTypeName;
-                UpdateRange();
-            }
-
-            public FunctionDefinitionNode(FunctionKeywordLeaf func, IdentifierLeaf id, ParameterListNode parameterList, SyntaxNode arrow, TypeLeafNode returnType, BlockNode body)
-                : this(func, id, parameterList, arrow, returnType, returnType.TypeName, body) { }
-            public FunctionDefinitionNode(FunctionKeywordLeaf func, IdentifierLeaf id, ParameterListNode parameterList, SyntaxNode arrow, VoidLeaf voidReturnType, BlockNode body)
-                : this(func, id, parameterList, arrow, voidReturnType, "void", body) { }
-
-            public override SyntaxNode ToAST()
-            {
-                Children.RemoveAt(3); // Remove the arrow
-                Children.RemoveAt(0); // Remove the function keyword
-                for (int i = 0; i < Children.Count; i++)
-                {
-                    Children[i] = Children[i].ToAST();
-                }
-                return this;
-            }
-        }
-        public class ParameterListNode : SyntaxNode
-        {
-            private static List<SyntaxNode> EmptyParams { get; } = [];
-
-            public ParameterListNode(OpenParenthesisLeaf openParen, List<SyntaxNode> parameters, CloseParenthesisLeaf closeParen)
-                : base([openParen, .. parameters, closeParen])
-                => UpdateRange();
-            public ParameterListNode(OpenParenthesisLeaf openParen, CloseParenthesisLeaf closeParen)
-                : this(openParen, EmptyParams, closeParen) { }
-
-            public override SyntaxNode ToAST()
-            {
-                Children.RemoveAt(Children.Count - 1); // Remove the close parenthesis
-                Children.RemoveAt(0); // Remove the open parenthesis
-                for (int i = 0; i < Children.Count; i++)
-                {
-                    if (Children[i] is CommaLeaf)
-                    {
-                        Children.RemoveAt(i);
-                        i--;
-                        continue;
-                    }
-                    Children[i] = Children[i].ToAST();
-                }
-                return this;
-            }
-        }
-
-        public class WhileStatementNode : SyntaxNode, IContainsScopeNode
-        {
-            public string Name => "While Loop";
-            public SyntaxNode Condition => Children[0];
-            public BlockNode Block { get; }
-            public WhileStatementNode(WhileKeywordLeaf whileKeyword, SyntaxNode condition, BlockNode body)
-                : base([whileKeyword, condition, body])
-            {
-                Block = body;
-                UpdateRange();
-            }
-
-            public override SyntaxNode ToAST()
-            {
-                Children.RemoveAt(0); // Remove the while keyword
-                Children[0] = Children[0].ToAST(); // Convert the condition to AST
-                Children[1] = Children[1].ToAST(); // Convert the body
-                return this;
-            }
-        }
-
-        public class BlockNode : SyntaxNode, IContainsScopeNode
-        {
-            public string Name => "Anonymous Block";
-            public BlockNode Block => this;
-            public uint ID { get; set; }
-
-            public BlockNode(OpenBraceLeaf openBrace, List<SyntaxNode> statements, CloseBraceLeaf closeBrace)
-                : base([openBrace, .. statements, closeBrace])
-                => UpdateRange();
-
-            public override SyntaxNode ToAST()
-            {
-                if (Children.Count == 3 && Children[1] is BlockNode blockNode)
-                {
-                    return blockNode.ToAST();
-                }
-
-                Children.RemoveAt(Children.Count - 1); // Remove the close brace
-                Children.RemoveAt(0); // Remove the open brace
-                for (int i = 0; i < Children.Count; i++)
-                {
-                    Children[i] = Children[i].ToAST();
-                }
-                return this;
-            }
-        }
-
-
-        public class EpsilonNode : SyntaxNode
-        {
-            public static EpsilonNode Instance { get; } = new();
-            private EpsilonNode() { }
-
-            public override SyntaxNode ToAST() => this;
-        }
-        public class EmptyStatement : SyntaxNode
-        {
-            public EmptyStatement(SemicolonLeaf semicolon) : base([semicolon])
-                => UpdateRange();
-
-            public override SyntaxNode ToAST()
-            {
-                Children.Clear();
-                return this;
-            }
-        }
-        public class ParserEntrypoint(SyntaxNode child) : SyntaxNode([child])
-        {
-            public override SyntaxNode ToAST()
-            {
-                Children[0] = Children[0].ToAST();
-                return this;
-            }
         }
     }
 }

@@ -1,4 +1,4 @@
-namespace CompilerLib.Parser.Nodes
+namespace CompilerLib.Parser.Nodes.Types
 {
     public static class PrimitiveTypes
     {
