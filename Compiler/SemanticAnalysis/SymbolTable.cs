@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 
-namespace Compiler.Parser
+namespace Compiler.SemanticAnalysis
 {
     internal class SymbolTable
     {

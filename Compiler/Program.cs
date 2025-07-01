@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using Compiler.Parser;
+using Compiler.SemanticAnalysis;
 
 namespace Compiler
 {

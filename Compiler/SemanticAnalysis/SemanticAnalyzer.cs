@@ -1,5 +1,4 @@
 using System.Text;
-using Compiler.Parser;
 using CompilerLib.Parser.Nodes;
 using CompilerLib.Parser.Nodes.Functions;
 using CompilerLib.Parser.Nodes.Operators;
@@ -7,10 +6,9 @@ using CompilerLib.Parser.Nodes.Scopes;
 using CompilerLib.Parser.Nodes.Statements;
 using CompilerLib.Parser.Nodes.Statements.Controls;
 using CompilerLib.Parser.Nodes.Types;
-using static Compiler.Parser.RecursiveDescentParser;
-using static Compiler.Parser.SymbolTable;
+using static Compiler.SemanticAnalysis.SymbolTable;
 
-namespace Compiler
+namespace Compiler.SemanticAnalysis
 {
     public class SemanticAnalyzer
     {
