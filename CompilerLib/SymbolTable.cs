@@ -1,9 +1,9 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 
-namespace Compiler.SemanticAnalysis
+namespace CompilerLib
 {
-    internal class SymbolTable
+    public class SymbolTable
     {
         [DebuggerDisplay("[{EnclosingScope.ID}.{SymbolPosition}] {Name,nq}:{Type,nq}")]
         public record class SymbolInfo(ScopeInfo EnclosingScope, int SymbolPosition, string Name, string Type);
