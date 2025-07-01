@@ -2,7 +2,8 @@ namespace Program.ExtendedName
 {
     func Main()
     {
-        let two: i32 = 2;
+        let one: i32 = 1;
+        let two: i32 = 2 + one * (one / one - one);
     }
 
     func add()

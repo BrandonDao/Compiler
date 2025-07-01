@@ -3,7 +3,6 @@ using CompilerLib.Parser.Nodes.Functions;
 using CompilerLib.Parser.Nodes.Operators;
 using CompilerLib.Parser.Nodes.Punctuation;
 using CompilerLib.Parser.Nodes.Statements;
-using CompilerLib.Parser.Nodes.Types;
 using static CompilerLib.ILGenerator;
 using static CompilerLib.SymbolTable;
 
@@ -74,17 +73,11 @@ namespace CompilerLib.Parser.Nodes.Scopes
                     switch (varDefNode.AssignedValue)
                     {
                         case ValueOperationNode valOp:
-                            valOp.GenerateCode(ilGen, localIdToIndex);
+                            valOp.GenerateCode(ilGen, statementInfos, indentLevel, localIdToIndex);
                             break;
-                        case LiteralLeaf literal:
-                            if (literal is IntLiteralLeaf intLiteral)
-                            {
-                                statementInfos.Add((ilGen.Emit(OpCode.ldc_i4, intLiteral.Value), indentLevel));
-                            }
-                            else throw new NotImplementedException();
+                        default:
+                            ValueOperationNode.ResolveOperand(ilGen, statementInfos, indentLevel, localIdToIndex, varDefNode.AssignedValue);
                             break;
-
-                        default: throw new NotImplementedException();
                     }
                     statementInfos.Add((ilGen.Emit(OpCode.stloc, localIdToIndex[varDefNode.NameTypeNode.Name]), indentLevel));
                 }
@@ -99,11 +92,13 @@ namespace CompilerLib.Parser.Nodes.Scopes
 
             codeBuilder.AppendIndentedLine(".locals init ( // ONLY SUPPORTED TYPES ARE: INT32", indentLevel);
             indentLevel++;
-            for (int i = 0; i < locals.Count; i++)
+            for (int i = 0; i < locals.Count - 1; i++)
             {
                 SymbolInfo symInfo = locals[i];
-                codeBuilder.AppendIndentedLine($"[{i}] {PrimitiveNameMap[symInfo.Type]} // {symInfo.Name}", indentLevel);
+                codeBuilder.AppendIndentedLine($"[{i}] {PrimitiveNameMap[symInfo.Type]}, // {symInfo.Name}", indentLevel);
             }
+            SymbolInfo lastSymInfo = locals[^1];
+            codeBuilder.AppendIndentedLine($"[{locals.Count - 1}] {PrimitiveNameMap[lastSymInfo.Type]} // {lastSymInfo.Name}", indentLevel);
             indentLevel--;
             codeBuilder.AppendIndentedLine(")", indentLevel);
 
@@ -118,15 +113,14 @@ namespace CompilerLib.Parser.Nodes.Scopes
         : BlockNode(openBrace, statements, closeBrace)
     { }
 
-    public class NonLocalBlockNode(OpenBraceLeaf openBrace, List<SyntaxNode> statements, CloseBraceLeaf closeBrace)
-        : CodeGenBlockNode(openBrace, statements, closeBrace)
+    public class NonLocalBlockNode(OpenBraceLeaf openBrace, List<SyntaxNode> statements, CloseBraceLeaf closeBrace) : CodeGenBlockNode(openBrace, statements, closeBrace)
     {
-        private readonly List<SyntaxNode> statements = statements;
+        private readonly List<SyntaxNode> innerStatements = statements;
 
         public override void GenerateILCode(ILGenerator ilGen, StringBuilder codeBuilder, int indentLevel)
         {
             indentLevel++;
-            foreach (var child in statements)
+            foreach (var child in innerStatements)
             {
                 if (child is FunctionDefinitionNode functionDef)
                 {
