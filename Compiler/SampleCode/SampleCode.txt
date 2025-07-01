@@ -1,7 +1,12 @@
 namespace Program.ExtendedName
 {
-    func main()
+    func Main()
     {
         let two: i32 = 2;
+    }
+
+    func add()
+    {
+        let result: i32 = 20;
     }
 }

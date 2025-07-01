@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using Compiler.Parser;
 using Compiler.SemanticAnalysis;
+using CompilerLib;
 
 namespace Compiler
 {
@@ -11,6 +12,8 @@ namespace Compiler
             RegexLexer lexer = new();
 
             const string relativeCodeFilePath = @"SampleCode\SampleCode.txt";
+            const string relativeILFilePath = @"GeneratedIL.txt";
+
             var tokens = lexer.TokenizeFile(
 #if DEBUG
                 filePath: Path.Combine("..", "..", "..", relativeCodeFilePath),
@@ -54,8 +57,16 @@ namespace Compiler
 
             Console.WriteLine("\nCODE GENERATION");
             StringBuilder codeBuilder = new();
-            astRoot.GenerateCode(codeBuilder, indentLevel: 0);
-            Console.WriteLine(codeBuilder.ToString());
+            ILGenerator iLGenerator = new();
+            astRoot.GenerateILCode(iLGenerator, codeBuilder, indentLevel: 0);
+
+            string generatedIL = codeBuilder.ToString();
+            Console.WriteLine(generatedIL);
+
+            File.WriteAllText(
+                Path.Combine("..", "..", "..", relativeILFilePath),
+                generatedIL
+            );
         }
     }
 }

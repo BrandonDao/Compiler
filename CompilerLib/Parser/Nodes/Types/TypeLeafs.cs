@@ -1,6 +1,6 @@
 namespace CompilerLib.Parser.Nodes.Types
 {
-    public static class PrimitiveTypes
+    public static class PrimitiveTypeNames
     {
         public const string Int8 = "int8";
         public const string Int16 = "int16";
@@ -20,27 +20,27 @@ namespace CompilerLib.Parser.Nodes.Types
     public class Int8Leaf(string value, int startLine, int startChar, int endLine, int endChar)
         : PrimitiveLeaf(value, startLine, startChar, endLine, endChar)
     {
-        public override string TypeName => PrimitiveTypes.Int8;
+        public override string TypeName => PrimitiveTypeNames.Int8;
     }
     public class Int16Leaf(string value, int startLine, int startChar, int endLine, int endChar)
         : PrimitiveLeaf(value, startLine, startChar, endLine, endChar)
     {
-        public override string TypeName => PrimitiveTypes.Int16;
+        public override string TypeName => PrimitiveTypeNames.Int16;
     }
     public class Int32Leaf(string value, int startLine, int startChar, int endLine, int endChar)
         : PrimitiveLeaf(value, startLine, startChar, endLine, endChar)
     {
-        public override string TypeName => PrimitiveTypes.Int32;
+        public override string TypeName => PrimitiveTypeNames.Int32;
     }
     public class Int64Leaf(string value, int startLine, int startChar, int endLine, int endChar)
         : PrimitiveLeaf(value, startLine, startChar, endLine, endChar)
     {
-        public override string TypeName => PrimitiveTypes.Int64;
+        public override string TypeName => PrimitiveTypeNames.Int64;
     }
     public class BoolLeaf(string value, int startLine, int startChar, int endLine, int endChar)
         : PrimitiveLeaf(value, startLine, startChar, endLine, endChar)
     {
-        public override string TypeName => PrimitiveTypes.Bool;
+        public override string TypeName => PrimitiveTypeNames.Bool;
     }
 
 

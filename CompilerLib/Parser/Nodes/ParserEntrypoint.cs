@@ -1,3 +1,4 @@
+using System.Numerics;
 using System.Text;
 using CompilerLib.Parser.Nodes.Scopes;
 
@@ -24,7 +25,7 @@ namespace CompilerLib.Parser.Nodes
 
         private readonly NamespaceDefinitionNode namespaceChild = child;
 
-        public void GenerateCode(StringBuilder codeBuilder, int indentLevel)
+        public void GenerateILCode(ILGenerator ilGen, StringBuilder codeBuilder, int indentLevel)
         {
             codeBuilder.AppendIndentedLine(".assembly _ { }", indentLevel);
             codeBuilder.AppendIndentedLine(".assembly extern System.Runtime { }", indentLevel);
@@ -45,8 +46,8 @@ namespace CompilerLib.Parser.Nodes
             codeBuilder.AppendIndentedLine("} // end of method Program::.ctor\n", indentLevel + 1);
 
             // methods in the program
-            namespaceChild.GenerateCode(codeBuilder, indentLevel);
-            codeBuilder.AppendIndentedLine("} // end of class Program\n", indentLevel);
+            namespaceChild.GenerateILCode(ilGen, codeBuilder, indentLevel);
+            codeBuilder.AppendIndentedLine("} // end of class Program", indentLevel);
         }
 
         public override ParserEntrypointNode ToAST()

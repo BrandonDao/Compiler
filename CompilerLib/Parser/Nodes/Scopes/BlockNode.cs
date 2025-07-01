@@ -36,37 +36,27 @@ namespace CompilerLib.Parser.Nodes.Scopes
             }
             return this;
         }
-
-        protected static void PushStack(ref int maxStack, ref int currentStack)
-        {
-            currentStack++;
-            maxStack = Math.Max(maxStack, currentStack);
-        }
-        protected static void PopStack(ref int currentStack)
-        {
-            currentStack--;
-        }
     }
     public abstract class CodeGenBlockNode(OpenBraceLeaf openBrace, List<SyntaxNode> statements, CloseBraceLeaf closeBrace)
         : BlockNode(openBrace, statements, closeBrace),
         IGeneratesCode
     {
-        public abstract void GenerateCode(StringBuilder codeBuilder, int indentLevel);
+        public abstract void GenerateILCode(ILGenerator ilGen, StringBuilder codeBuilder, int indentLevel);
     }
 
     public class FunctionBlockNode(OpenBraceLeaf openBrace, List<SyntaxNode> statements, CloseBraceLeaf closeBrace)
         : CodeGenBlockNode(openBrace, statements, closeBrace)
     {
+        public bool IsEntryPoint { get; set; } = false;
         public ScopeInfo? ScopeInfo { get; set; }
 
-        public override void GenerateCode(StringBuilder codeBuilder, int indentLevel)
+        public override void GenerateILCode(ILGenerator ilGen, StringBuilder codeBuilder, int indentLevel)
         {
             if (ScopeInfo == null) throw new InvalidOperationException("Function Scope Info missing!");
 
             indentLevel++;
 
-            int maxStack = 0;
-            int currStack = 0;
+            ilGen.ResetStackTracking();
             List<(string statement, int indentLevel)> statementInfos = [];
 
             Dictionary<string, int> localIdToIndex = new(capacity: ScopeInfo.SymbolInfoByName.Count);
@@ -84,27 +74,28 @@ namespace CompilerLib.Parser.Nodes.Scopes
                     switch (varDefNode.AssignedValue)
                     {
                         case ValueOperationNode valOp:
-                            valOp.GenerateCode(ref maxStack, ref currStack, localIdToIndex);
+                            valOp.GenerateCode(ilGen, localIdToIndex);
                             break;
                         case LiteralLeaf literal:
                             if (literal is IntLiteralLeaf intLiteral)
                             {
-                                statementInfos.Add((Emit(OpCode.ldc_i4, intLiteral.Value), indentLevel));
-                                PushStack(ref maxStack, ref currStack);
+                                statementInfos.Add((ilGen.Emit(OpCode.ldc_i4, intLiteral.Value), indentLevel));
                             }
                             else throw new NotImplementedException();
                             break;
 
                         default: throw new NotImplementedException();
                     }
-                    statementInfos.Add((Emit(OpCode.stloc, localIdToIndex[varDefNode.NameTypeNode.Name]), indentLevel));
-                    PopStack(ref currStack);
+                    statementInfos.Add((ilGen.Emit(OpCode.stloc, localIdToIndex[varDefNode.NameTypeNode.Name]), indentLevel));
                 }
                 else throw new NotImplementedException();
             }
 
-            codeBuilder.AppendIndentedLine($".maxstack {maxStack}", indentLevel);
-            codeBuilder.AppendIndentedLine(".entrypoint", indentLevel);
+            codeBuilder.AppendIndentedLine($".maxstack {ilGen.MaxStack}", indentLevel);
+            if (IsEntryPoint)
+            {
+                codeBuilder.AppendIndentedLine(".entrypoint // CURRENTLY DETERMINED ONLY BY METHOD NAME", indentLevel);
+            }
 
             codeBuilder.AppendIndentedLine(".locals init ( // ONLY SUPPORTED TYPES ARE: INT32", indentLevel);
             indentLevel++;
@@ -132,14 +123,14 @@ namespace CompilerLib.Parser.Nodes.Scopes
     {
         private readonly List<SyntaxNode> statements = statements;
 
-        public override void GenerateCode(StringBuilder codeBuilder, int indentLevel)
+        public override void GenerateILCode(ILGenerator ilGen, StringBuilder codeBuilder, int indentLevel)
         {
             indentLevel++;
             foreach (var child in statements)
             {
                 if (child is FunctionDefinitionNode functionDef)
                 {
-                    functionDef.GenerateCode(codeBuilder, indentLevel);
+                    functionDef.GenerateILCode(ilGen, codeBuilder, indentLevel);
                 }
                 else throw new NotImplementedException();
             }

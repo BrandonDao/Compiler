@@ -19,6 +19,7 @@ namespace CompilerLib.Parser.Nodes.Functions
         {
             Name = id.Value;
             FunctionBlockNode = body;
+            FunctionBlockNode.IsEntryPoint = Name == "Main";
             ReturnTypeName = returnTypeName;
             UpdateRange();
         }
@@ -39,12 +40,28 @@ namespace CompilerLib.Parser.Nodes.Functions
             return this;
         }
 
-        public void GenerateCode(StringBuilder codeBuilder, int indentLevel)
+        public void GenerateILCode(ILGenerator ilGen, StringBuilder codeBuilder, int indentLevel)
         {
-            codeBuilder.AppendIndentedLine(".method public hidebysig static", indentLevel);
-            codeBuilder.AppendIndentedLine($"{ReturnTypeName} {Name} (/*PARAMETERS ARE UNSUPPORTED*/) cil managed", indentLevel + 1);
+            if (FunctionBlockNode.IsEntryPoint)
+            {
+                codeBuilder.AppendIndentedLine(".method public hidebysig static", indentLevel);
+                codeBuilder.AppendIndentedLine($"void 'Main' (/*PARAMETERS ARE UNSUPPORTED*/) cil managed", indentLevel + 1);
+            }
+            else
+            {
+                codeBuilder.AppendIndentedLine($".method public hidebysig static", indentLevel);
+                if (ILGenerator.PrimitiveNameMap.TryGetValue(ReturnTypeName, out var primitiveTypeName))
+                {
+                    codeBuilder.AppendIndented(primitiveTypeName, indentLevel + 1);
+                }
+                else
+                {
+                    codeBuilder.AppendIndented(ReturnTypeName, indentLevel + 1);
+                }
+                codeBuilder.AppendLine($" '{Name}' () cil managed");
+            }
             codeBuilder.AppendIndentedLine("{", indentLevel);
-            FunctionBlockNode.GenerateCode(codeBuilder, indentLevel);
+            FunctionBlockNode.GenerateILCode(ilGen, codeBuilder, indentLevel);
             codeBuilder.AppendIndentedLine($"}} // End of method '{Name}'\n", indentLevel);
         }
     }
