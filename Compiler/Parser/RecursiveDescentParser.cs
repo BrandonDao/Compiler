@@ -15,16 +15,16 @@ namespace Compiler.Parser
 
         private RecursiveDescentParser() { }
 
-        public SyntaxNode? ParseTokens(List<LeafNode> tokens)
+        public ParserEntrypointNode? ParseTokensToCST(List<LeafNode> tokens)
         {
             if (tokens.Count == 0) return null;
 
             int position = 0;
             tokens = HangWhitespace(tokens);
-            return ParseNamespaceDefinition(tokens, ref position);
+            return new ParserEntrypointNode(ParseNamespaceDefinition(tokens, ref position));
         }
 
-        public SyntaxNode ToAST(SyntaxNode root) => new ParserEntrypointNode(root.ToAST());
+        public ParserEntrypointNode ParseCSTToAST(ParserEntrypointNode root) => root.ToAST();
 
         private static List<LeafNode> HangWhitespace(List<LeafNode> tokens)
         {
@@ -301,7 +301,7 @@ namespace Compiler.Parser
                 if (tokens[position] is not OpenBraceLeaf)
                     throw new ArgumentException($"Expected '->' or '{{' token after function parameters, not {tokens[position]}!");
 
-                var voidReturningBody = ParseStatementBlock(tokens, ref position);
+                var voidReturningBody = ParseFunctionBlock(tokens, ref position);
                 return new FunctionDefinitionNode(
                     funcKeywordLeaf,
                     idToken,
@@ -315,13 +315,13 @@ namespace Compiler.Parser
             if (tokens[position] is VoidLeaf voidLeaf)
             {
                 position++;
-                var body = ParseStatementBlock(tokens, ref position);
+                var body = ParseFunctionBlock(tokens, ref position);
                 return new FunctionDefinitionNode(funcKeywordLeaf, idToken, parameterList, arrowToken, voidLeaf, body);
             }
             else
             {
                 var returnType = ParseType(tokens, ref position);
-                var body = ParseStatementBlock(tokens, ref position);
+                var body = ParseFunctionBlock(tokens, ref position);
                 return new FunctionDefinitionNode(funcKeywordLeaf, idToken, parameterList, arrowToken, returnType, body);
             }
         }
@@ -372,7 +372,7 @@ namespace Compiler.Parser
             position++;
             var condition = ParseValueExpression(tokens, ref position);
 
-            var body = ParseStatementBlock(tokens, ref position);
+            var body = ParseFunctionBlock(tokens, ref position);
 
             return new WhileStatementNode(whileKeywordLeaf, condition, body);
         }
@@ -406,12 +406,29 @@ namespace Compiler.Parser
             return new QualifiedNameNode(nameParts);
         }
 
-        private static BlockNode ParseStatementBlock(List<LeafNode> tokens, ref int position)
+        private static FunctionBlockNode ParseFunctionBlock(List<LeafNode> tokens, ref int position)
         {
             if (tokens[position] is not OpenBraceLeaf openBraceToken)
                 throw new ArgumentException($"Expected '{{' token at start of block, not {tokens[position]}!");
 
             position++;
+            var (statements, closeBraceLeaf) = ParseStatementsInBlock(tokens, ref position);
+
+            return new FunctionBlockNode(openBraceToken, statements, closeBraceLeaf);
+        }
+        private static LocalBlockNode ParseLocalBlock(List<LeafNode> tokens, ref int position)
+        {
+            if (tokens[position] is not OpenBraceLeaf openBraceToken)
+                throw new ArgumentException($"Expected '{{' token at start of block, not {tokens[position]}!");
+
+            position++;
+            var (statements, closeBraceLeaf) = ParseStatementsInBlock(tokens, ref position);
+
+            return new LocalBlockNode(openBraceToken, statements, closeBraceLeaf);
+        }
+
+        private static (List<SyntaxNode> statements, CloseBraceLeaf closeBrace) ParseStatementsInBlock(List<LeafNode> tokens, ref int position)
+        {
             List<SyntaxNode> statements = [];
 
             CloseBraceLeaf closeBraceLeaf;
@@ -453,7 +470,7 @@ namespace Compiler.Parser
                 }
                 else if (tokens[position] is OpenBraceLeaf)
                 {
-                    statements.Add(ParseStatementBlock(tokens, ref position));
+                    statements.Add(ParseLocalBlock(tokens, ref position));
                 }
                 else if (tokens[position] is SemicolonLeaf semicolon)
                 {
@@ -468,9 +485,10 @@ namespace Compiler.Parser
                 }
                 else throw new ArgumentException($"Unexpected token in block: {tokens[position]}!");
             }
-            return new BlockNode(openBraceToken, statements, closeBraceLeaf);
+            return (statements, closeBraceLeaf);
         }
-        private static BlockNode ParseHighLevelBlock(List<LeafNode> tokens, ref int position)
+
+        private static NonLocalBlockNode ParseHighLevelBlock(List<LeafNode> tokens, ref int position)
         {
             if (tokens[position] is not OpenBraceLeaf openBraceToken)
                 throw new ArgumentException($"Expected '{{' token at start of block, not {tokens[position]}!");
@@ -501,7 +519,7 @@ namespace Compiler.Parser
                 }
                 else throw new ArgumentException($"Unexpected token in block: {tokens[position]}!");
             }
-            return new BlockNode(openBraceToken, statements, closeBraceLeaf);
+            return new NonLocalBlockNode(openBraceToken, statements, closeBraceLeaf);
         }
     }
 }

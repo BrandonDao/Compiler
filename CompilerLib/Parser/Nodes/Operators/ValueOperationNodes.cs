@@ -7,6 +7,8 @@ namespace CompilerLib.Parser.Nodes.Operators
         public ValueOperationNode() { }
         public ValueOperationNode(List<SyntaxNode> children) : base(children) { }
 
+        public abstract void GenerateCode(ref int maxStack, ref int currentStack, Dictionary<string, int> localIdToIndex);
+
         public override SyntaxNode ToAST()
         {
             Children.RemoveAt(1); // Remove operator
@@ -35,20 +37,64 @@ namespace CompilerLib.Parser.Nodes.Operators
     public class ParenthesizedExpression(OpenParenthesisLeaf open, SyntaxNode expr, CloseParenthesisLeaf close)
         : ValueOperationNode([open, expr, close])
     {
+        public override void GenerateCode(ref int maxStack, ref int currentStack, Dictionary<string, int> localIdToIndex)
+        {
+            throw new NotImplementedException();
+        }
+
         public override SyntaxNode ToAST()
         {
             return Children[1].ToAST(); // Return the expression inside the parentheses
         }
     }
 
-    public class MultiplyOperationNode(List<SyntaxNode> children) : HighPrecedenceOperationNode(children, "*");
-    public class DivideOperationNode(List<SyntaxNode> children) : HighPrecedenceOperationNode(children, "/");
-    public class ModOperationNode(List<SyntaxNode> children) : HighPrecedenceOperationNode(children, "%");
-    public class AddOperationNode(List<SyntaxNode> children) : LowPrecedenceOperationNode(children, "+");
-    public class SubtractOperationNode(List<SyntaxNode> children) : LowPrecedenceOperationNode(children, "-");
+    public class MultiplyOperationNode(List<SyntaxNode> children) : HighPrecedenceOperationNode(children, "*")
+    {
+        public override void GenerateCode(ref int maxStack, ref int currentStack, Dictionary<string, int> localIdToIndex)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    public class DivideOperationNode(List<SyntaxNode> children) : HighPrecedenceOperationNode(children, "/")
+    {
+        public override void GenerateCode(ref int maxStack, ref int currentStack, Dictionary<string, int> localIdToIndex)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    public class ModOperationNode(List<SyntaxNode> children) : HighPrecedenceOperationNode(children, "%")
+    {
+        public override void GenerateCode(ref int maxStack, ref int currentStack, Dictionary<string, int> localIdToIndex)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    public class AddOperationNode(List<SyntaxNode> children) : LowPrecedenceOperationNode(children, "+")
+    {
+        public override void GenerateCode(ref int maxStack, ref int currentStack, Dictionary<string, int> localIdToIndex)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    public class SubtractOperationNode(List<SyntaxNode> children) : LowPrecedenceOperationNode(children, "-")
+    {
+        public override void GenerateCode(ref int maxStack, ref int currentStack, Dictionary<string, int> localIdToIndex)
+        {
+            throw new NotImplementedException();
+        }
+    }
 
     public class NotOperationNode(List<SyntaxNode> children) : UnaryOperationNode(children)
     {
+        public override void GenerateCode(ref int maxStack, ref int currentStack, Dictionary<string, int> localIdToIndex)
+        {
+            throw new NotImplementedException();
+        }
+
         public override SyntaxNode ToAST()
         {
             // Remove the 'not' operator
@@ -60,7 +106,27 @@ namespace CompilerLib.Parser.Nodes.Operators
             return this;
         }
     }
-    public class OrOperationNode(List<SyntaxNode> children) : LowPrecedenceOperationNode(children, "|");
-    public class AndOperationNode(List<SyntaxNode> children) : LowPrecedenceOperationNode(children, "&");
-    public class EqualityOperationNode(List<SyntaxNode> children) : LowPrecedenceOperationNode(children, "==");
+    public class OrOperationNode(List<SyntaxNode> children) : LowPrecedenceOperationNode(children, "|")
+    {
+        public override void GenerateCode(ref int maxStack, ref int currentStack, Dictionary<string, int> localIdToIndex)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    public class AndOperationNode(List<SyntaxNode> children) : LowPrecedenceOperationNode(children, "&")
+    {
+        public override void GenerateCode(ref int maxStack, ref int currentStack, Dictionary<string, int> localIdToIndex)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    public class EqualityOperationNode(List<SyntaxNode> children) : LowPrecedenceOperationNode(children, "==")
+    {
+        public override void GenerateCode(ref int maxStack, ref int currentStack, Dictionary<string, int> localIdToIndex)
+        {
+            throw new NotImplementedException();
+        }
+    }
 }

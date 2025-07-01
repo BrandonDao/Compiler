@@ -1,10 +1,22 @@
+using System.Text;
+
 namespace CompilerLib.Parser.Nodes.Scopes
 {
-    public class NamespaceDefinitionNode(NamespaceKeywordLeaf namespaceKeyword, QualifiedNameNode name, BlockNode block)
-        : SyntaxNode([namespaceKeyword, name, block]), IContainsScopeNode
+    public class NamespaceDefinitionNode(NamespaceKeywordLeaf namespaceKeyword, QualifiedNameNode name, NonLocalBlockNode block)
+        : SyntaxNode([namespaceKeyword, name, block]),
+        IContainsScopeNode, IGeneratesCode
     {
         public string Name => name.Name;
         public BlockNode Block => block;
+
+        public List<IGeneratesCode> CodeGenChildren => [block];
+
+        public void GenerateCode(StringBuilder codeBuilder, int indentLevel)
+        {
+            codeBuilder.AppendIndentedLine($"//// Namespace '{Name}' Visited ----------------\n", indentLevel);
+            block.GenerateCode(codeBuilder, indentLevel);
+        }
+
         public override SyntaxNode ToAST()
         {
             Children.RemoveAt(0); // Remove the namespace keyword

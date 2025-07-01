@@ -27,7 +27,7 @@ namespace CompilerLib
             AddScope(scopeID: 0, "Global", isLocal: false, parentScopeID: 0);
         }
 
-        public void AddScope(uint scopeID, string name, bool isLocal, uint parentScopeID)
+        public ScopeInfo AddScope(uint scopeID, string name, bool isLocal, uint parentScopeID)
         {
             if (scopeInfoByName.ContainsKey(scopeID)) throw new ArgumentException($"Scope with ID {scopeID} already exists!");
 
@@ -36,7 +36,9 @@ namespace CompilerLib
             if (scopeID != 0 && !scopeInfoByName.TryGetValue(parentScopeID, out parent))
                 throw new ArgumentException($"Parent scope with ID {parentScopeID} does not exist.");
 
-            scopeInfoByName[scopeID] = new ScopeInfo(scopeID, name, isLocal, parent);
+            ScopeInfo scopeInfo = new(scopeID, name, isLocal, parent);
+            scopeInfoByName[scopeID] = scopeInfo;
+            return scopeInfo;
         }
 
         public void AddSymbol(uint scopeID, int symbolPosition, string name, string type)

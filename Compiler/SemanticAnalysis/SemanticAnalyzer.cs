@@ -1,4 +1,5 @@
 using System.Text;
+using CompilerLib;
 using CompilerLib.Parser.Nodes;
 using CompilerLib.Parser.Nodes.Functions;
 using CompilerLib.Parser.Nodes.Operators;
@@ -6,7 +7,7 @@ using CompilerLib.Parser.Nodes.Scopes;
 using CompilerLib.Parser.Nodes.Statements;
 using CompilerLib.Parser.Nodes.Statements.Controls;
 using CompilerLib.Parser.Nodes.Types;
-using static Compiler.SemanticAnalysis.SymbolTable;
+using static CompilerLib.SymbolTable;
 
 namespace Compiler.SemanticAnalysis
 {
@@ -132,6 +133,12 @@ namespace Compiler.SemanticAnalysis
                         {
                             symbolTable.AddSymbol(currentScopeID, symbolPosition, funcDefNode.Name, funcDefNode.ReturnTypeName);
                         }
+
+                        string funcName = scopeContainer.Name;
+                        scopeContainer.Block.ID = scopeID;
+                        funcDefNode.FunctionBlockNode.ScopeInfo = symbolTable.AddScope(scopeID, funcName, isScopeContainerLocal, currentScopeID);
+                        BuildSymbolTable(scopeContainer.Block, scopeID++, symbolPosition: 0, isScopeContainerLocal);
+                        return;
                     }
 
                     string name = scopeContainer.Name;

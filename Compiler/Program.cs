@@ -10,7 +10,7 @@ namespace Compiler
         {
             RegexLexer lexer = new();
 
-            const string relativeCodeFilePath = @"SampleCode\SampleCode2.txt";
+            const string relativeCodeFilePath = @"SampleCode\SampleCode.txt";
             var tokens = lexer.TokenizeFile(
 #if DEBUG
                 filePath: Path.Combine("..", "..", "..", relativeCodeFilePath),
@@ -32,7 +32,7 @@ namespace Compiler
 
             Console.WriteLine("\nCONCRETE SYNTAX TREE");
             var parser = RecursiveDescentParser.Instance;
-            var cstRoot = parser.ParseTokens(tokens) ?? throw new ArgumentException("Failed to parse tokens into CST!");
+            var cstRoot = parser.ParseTokensToCST(tokens) ?? throw new ArgumentException("Failed to parse tokens into CST!");
             Console.WriteLine(cstRoot.GetPrintable());
 
             Console.WriteLine("CST -> ORIGINAL INPUT");
@@ -41,7 +41,7 @@ namespace Compiler
             Console.WriteLine(builder.ToString());
 
             Console.WriteLine("\nCST -> AST");
-            var astRoot = parser.ToAST(cstRoot) ?? throw new ArgumentException("Failed to convert CST to AST!");
+            var astRoot = parser.ParseCSTToAST(cstRoot) ?? throw new ArgumentException("Failed to convert CST to AST!");
             Console.WriteLine(astRoot.GetPrintable());
 
             SemanticAnalyzer analyzer = new();
@@ -51,6 +51,11 @@ namespace Compiler
             Console.WriteLine(semanticAnalyzerCompletionMessage);
             Console.WriteLine();
             Console.WriteLine(analyzer.GetPrintable());
+
+            Console.WriteLine("\nCODE GENERATION");
+            StringBuilder codeBuilder = new();
+            astRoot.GenerateCode(codeBuilder, indentLevel: 0);
+            Console.WriteLine(codeBuilder.ToString());
         }
     }
 }

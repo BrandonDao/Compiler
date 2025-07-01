@@ -1,41 +1,7 @@
-alias
-   int = int32 
-;  alias byte=int8;
-
-
-
-
-
-
-func void FizzBuzz(int16 n, byte throwaway)
+namespace Program.ExtendedName
 {
-    int ifnt = 1;
-    while (ifnt <= n)
+    func main()
     {
-        if(ifnt % 15 == 0)
-        {
-        }
-        else
-        {
-            if (ifnt % 3 == 0)
-            {
-            }
-            else
-            {
-                if (ifnt % 5 == 0)
-                {
-                }
-                else
-                {
-                }
-            }
-        }
-        ifnt = ifnt + 1;
+        let two: i32 = 2;
     }
-}
-
-func void Main()
-{
-    int count = 20;
-    FizzBuzz(count);
 }
