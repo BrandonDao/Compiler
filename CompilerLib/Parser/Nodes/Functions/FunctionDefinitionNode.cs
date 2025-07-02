@@ -9,6 +9,7 @@ namespace CompilerLib.Parser.Nodes.Functions
         IContainsScopeNode, IGeneratesCode
     {
         public string Name { get; }
+        public ParameterListNode ParameterList { get; }
         public BlockNode Block => FunctionBlockNode;
         public string ReturnTypeName { get; }
 
@@ -18,6 +19,7 @@ namespace CompilerLib.Parser.Nodes.Functions
             : base([func, id, parameterList, arrow, returnTypeNode, body])
         {
             Name = id.Value;
+            ParameterList = parameterList;
             FunctionBlockNode = body;
             FunctionBlockNode.IsEntryPoint = Name == "Main";
             ReturnTypeName = returnTypeName;
@@ -40,7 +42,7 @@ namespace CompilerLib.Parser.Nodes.Functions
             return this;
         }
 
-        public void GenerateILCode(ILGenerator ilGen, StringBuilder codeBuilder, int indentLevel)
+        public void GenerateILCode(ILGenerator ilGen, SymbolTable symbolTable, StringBuilder codeBuilder, int indentLevel)
         {
             if (FunctionBlockNode.IsEntryPoint)
             {
@@ -61,7 +63,7 @@ namespace CompilerLib.Parser.Nodes.Functions
                 codeBuilder.AppendLine($" '{Name}' () cil managed");
             }
             codeBuilder.AppendIndentedLine("{", indentLevel);
-            FunctionBlockNode.GenerateILCode(ilGen, codeBuilder, indentLevel);
+            FunctionBlockNode.GenerateILCode(ilGen, symbolTable, codeBuilder, indentLevel);
             codeBuilder.AppendIndentedLine($"}} // End of method '{Name}'\n", indentLevel);
         }
     }

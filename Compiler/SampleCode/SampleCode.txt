@@ -4,10 +4,12 @@ namespace Program.ExtendedName
     {
         let one: i32 = 1;
         let two: i32 = 2 + one * (one / one - one);
+
+        let three:i16 = add(1, two);;
     }
 
-    func add()
+    func add(a:i32, b:i32)
     {
-        let result: i32 = 20;
+        let result: i32 = a + b;
     }
 }

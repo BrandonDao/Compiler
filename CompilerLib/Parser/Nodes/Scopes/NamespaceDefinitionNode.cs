@@ -11,10 +11,10 @@ namespace CompilerLib.Parser.Nodes.Scopes
 
         public List<IGeneratesCode> CodeGenChildren => [block];
 
-        public void GenerateILCode(ILGenerator ilGen, StringBuilder codeBuilder, int indentLevel)
+        public void GenerateILCode(ILGenerator ilGen, SymbolTable symbolTable, StringBuilder codeBuilder, int indentLevel)
         {
             codeBuilder.AppendIndentedLine($"//// Namespace '{Name}' Visited ----------------\n", indentLevel);
-            block.GenerateILCode(ilGen, codeBuilder, indentLevel);
+            block.GenerateILCode(ilGen, symbolTable, codeBuilder, indentLevel);
         }
 
         public override SyntaxNode ToAST()

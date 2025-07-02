@@ -13,7 +13,7 @@ namespace Compiler.SemanticAnalysis
 {
     public class SemanticAnalyzer
     {
-        readonly SymbolTable symbolTable = new();
+        public SymbolTable SymbolTable { get; } = new();
 
         delegate bool AnalysisStage(SyntaxNode rootNode, StringBuilder messageStringBuilder);
         readonly AnalysisStage[] analysisStages;
@@ -45,11 +45,11 @@ namespace Compiler.SemanticAnalysis
 
         private bool RegisterPrimitives(SyntaxNode _, StringBuilder messageSB)
         {
-            symbolTable.AddSymbol(scopeID: 0, symbolPosition: -1, PrimitiveTypeNames.Int8, PrimitiveTypeNames.Int8);
-            symbolTable.AddSymbol(scopeID: 0, symbolPosition: -1, PrimitiveTypeNames.Int16, PrimitiveTypeNames.Int16);
-            symbolTable.AddSymbol(scopeID: 0, symbolPosition: -1, PrimitiveTypeNames.Int32, PrimitiveTypeNames.Int32);
-            symbolTable.AddSymbol(scopeID: 0, symbolPosition: -1, PrimitiveTypeNames.Int64, PrimitiveTypeNames.Int64);
-            symbolTable.AddSymbol(scopeID: 0, symbolPosition: -1, PrimitiveTypeNames.Bool, PrimitiveTypeNames.Bool);
+            SymbolTable.AddSymbol(scopeID: 0, symbolPosition: -1, PrimitiveTypeNames.Int8, PrimitiveTypeNames.Int8);
+            SymbolTable.AddSymbol(scopeID: 0, symbolPosition: -1, PrimitiveTypeNames.Int16, PrimitiveTypeNames.Int16);
+            SymbolTable.AddSymbol(scopeID: 0, symbolPosition: -1, PrimitiveTypeNames.Int32, PrimitiveTypeNames.Int32);
+            SymbolTable.AddSymbol(scopeID: 0, symbolPosition: -1, PrimitiveTypeNames.Int64, PrimitiveTypeNames.Int64);
+            SymbolTable.AddSymbol(scopeID: 0, symbolPosition: -1, PrimitiveTypeNames.Bool, PrimitiveTypeNames.Bool);
 
             messageSB.AppendLine("Primitive types registered successfully.");
             return true;
@@ -89,7 +89,7 @@ namespace Compiler.SemanticAnalysis
                     }
                     else if (child is VariableDefinitionNode varDefNode)
                     {
-                        if (symbolTable.TryGetSymbolInfo(currentScopeID, varDefNode.NameTypeNode.Name, out var symbolInfo))
+                        if (SymbolTable.TryGetSymbolInfo(currentScopeID, varDefNode.NameTypeNode.Name, out var symbolInfo))
                         {
                             if (!isLocal || isLocal && symbolInfo.EnclosingScope.IsLocal)
                             {
@@ -105,7 +105,7 @@ namespace Compiler.SemanticAnalysis
                         }
                         else
                         {
-                            symbolTable.AddSymbol(currentScopeID, symbolPosition, varDefNode.NameTypeNode.Name, varDefNode.NameTypeNode.Type);
+                            SymbolTable.AddSymbol(currentScopeID, symbolPosition, varDefNode.NameTypeNode.Name, varDefNode.NameTypeNode.Type);
                         }
                     }
                 }
@@ -123,27 +123,24 @@ namespace Compiler.SemanticAnalysis
                     if (scopeContainer is FunctionDefinitionNode funcDefNode)
                     {
                         isScopeContainerLocal = true;
-                        if (symbolTable.TryGetSymbolInfo(currentScopeID, funcDefNode.Name, out SymbolInfo? info))
+                        if (SymbolTable.TryGetSymbolInfo(currentScopeID, funcDefNode.Name, out SymbolInfo? info))
                         {
                             hasFailed = true;
                             messageSB.AppendLine($"\t[{funcDefNode.StartLine}.{funcDefNode.StartChar}-{funcDefNode.EndLine}.{funcDefNode.EndChar}] "
                                     + $"Function with name '{funcDefNode.Name}' already exists in scope!");
                         }
-                        else
-                        {
-                            symbolTable.AddSymbol(currentScopeID, symbolPosition, funcDefNode.Name, funcDefNode.ReturnTypeName);
-                        }
 
-                        string funcName = scopeContainer.Name;
+                        FunctionInfo funcInfo = SymbolTable.AddFunction(scopeID, currentScopeID, funcDefNode.Name, funcDefNode.ReturnTypeName, funcDefNode.ParameterList.Children);
+
                         scopeContainer.Block.ID = scopeID;
-                        funcDefNode.FunctionBlockNode.ScopeInfo = symbolTable.AddScope(scopeID, funcName, isScopeContainerLocal, currentScopeID);
+                        funcDefNode.FunctionBlockNode.ScopeInfo = funcInfo.ChildScopeInfo;
                         BuildSymbolTable(scopeContainer.Block, scopeID++, symbolPosition: 0, isScopeContainerLocal);
                         return;
                     }
 
                     string name = scopeContainer.Name;
                     scopeContainer.Block.ID = scopeID;
-                    symbolTable.AddScope(scopeID, name, isScopeContainerLocal, currentScopeID);
+                    SymbolTable.AddScope(scopeID, name, isScopeContainerLocal, currentScopeID);
                     BuildSymbolTable(scopeContainer.Block, scopeID++, symbolPosition: 0, isScopeContainerLocal);
                 }
             }
@@ -173,11 +170,11 @@ namespace Compiler.SemanticAnalysis
                     {
                         IdentifierLeaf varID = varDefNode.NameTypeNode.Identifier;
 
-                        if (!symbolTable.TryGetSymbolInfo(currentScopeID, name: varID.Value, out SymbolInfo? nameInfo))
+                        if (!SymbolTable.TryGetSymbolInfo(currentScopeID, name: varID.Value, out SymbolInfo? nameInfo))
                             throw new InvalidOperationException($"Symbol table failed to build variable definitions correctly!"
                                 + "Could not find symbol: ({varID})");
 
-                        if (!symbolTable.ContainsSymbol(currentScopeID, varDefNode.NameTypeNode.Type))
+                        if (!SymbolTable.ContainsSymbol(currentScopeID, varDefNode.NameTypeNode.Type))
                         {
                             hasFailed = true;
                             messageSB.AppendLine($"\t[{varDefNode.NameTypeNode.StartLine}.{varDefNode.NameTypeNode.StartChar}-{varDefNode.NameTypeNode.EndLine}.{varDefNode.NameTypeNode.EndChar}] "
@@ -223,9 +220,12 @@ namespace Compiler.SemanticAnalysis
                     {
                         if (TryValidateAssignmentOrFuncCallScope(funcCall, currentScopeID, statementPosition))
                         {
-
-                            ValidateFunctionCall(funcCall, currentScopeID, messageSB);
+                            ResolveType(funcCall.FunctionCallExpression, currentScopeID, messageSB);
                         }
+                    }
+                    else if (child is EmptyStatementNode)
+                    {
+                        // Do nothing
                     }
                     else throw new NotImplementedException();
                 }
@@ -235,11 +235,20 @@ namespace Compiler.SemanticAnalysis
                 bool hasThisFailed = false;
                 if (node is IdentifierLeaf id)
                 {
-                    if (!symbolTable.TryGetSymbolInfo(currentScopeID, id.Value, out SymbolInfo? symInfo))
+                    if (!SymbolTable.TryGetSymbolInfo(currentScopeID, id.Value, out SymbolInfo? symInfo))
                     {
-                        hasThisFailed = true;
-                        hasFailed = true;
-                        messageSB.AppendLine($"\t[{id.StartLine}.{id.StartChar}-{id.EndLine}.{id.EndChar}] The identifier '{id.Value}' does not exist in the current context!");
+                        if (SymbolTable.TryGetFunctionInfo(currentScopeID, id.Value, out FunctionInfo? funcInfo))
+                        {
+                            hasThisFailed = true;
+                            hasFailed = true;
+                            messageSB.AppendLine($"\t[{id.StartLine}.{id.StartChar}-{id.EndLine}.{id.EndChar}] Cannot use the function '{id.Value}' like a variable! Did you mean to call it?");
+                        }
+                        else
+                        {
+                            hasThisFailed = true;
+                            hasFailed = true;
+                            messageSB.AppendLine($"\t[{id.StartLine}.{id.StartChar}-{id.EndLine}.{id.EndChar}] The identifier '{id.Value}' does not exist in the current context!");
+                        }
                     }
                     else
                     {
@@ -260,6 +269,16 @@ namespace Compiler.SemanticAnalysis
                         }
                     }
                 }
+                else if (node is FunctionCallExpressionNode funcCallExpr)
+                {
+                    if (!SymbolTable.TryGetFunctionInfo(currentScopeID, funcCallExpr.Identifier.Value, out FunctionInfo? funcInfo))
+                    {
+                        hasThisFailed = true;
+                        hasFailed = true;
+                        messageSB.AppendLine($"\t[{funcCallExpr.StartLine}.{funcCallExpr.StartChar}-{funcCallExpr.EndLine}.{funcCallExpr.EndChar}] "
+                            + $"The function '{funcCallExpr.Identifier.Value}' does not exist in the current context!");
+                    }
+                }
                 else
                 {
                     foreach (SyntaxNode? child in node.Children)
@@ -277,11 +296,14 @@ namespace Compiler.SemanticAnalysis
                 bool hasThisFailed = false;
                 if (node is IdentifierLeaf id)
                 {
-                    if (!symbolTable.TryGetSymbolInfo(currentScopeID, id.Value, out SymbolInfo? symInfo))
+                    if (!SymbolTable.TryGetSymbolInfo(currentScopeID, id.Value, out SymbolInfo? symInfo))
                     {
-                        hasThisFailed = true;
-                        hasFailed = true;
-                        messageSB.AppendLine($"\t[{id.StartLine}.{id.StartChar}-{id.EndLine}.{id.EndChar}] The identifier '{id.Value}' does not exist in the current context!");
+                        if (!SymbolTable.TryGetFunctionInfo(currentScopeID, id.Value, out FunctionInfo? funcInfo))
+                        {
+                            hasThisFailed = true;
+                            hasFailed = true;
+                            messageSB.AppendLine($"\t[{id.StartLine}.{id.StartChar}-{id.EndLine}.{id.EndChar}] The identifier '{id.Value}' does not exist in the current context!");
+                        }
                     }
                     else if (symInfo.EnclosingScope.IsLocal && symInfo.SymbolPosition >= statementPosition)
                     {
@@ -314,7 +336,7 @@ namespace Compiler.SemanticAnalysis
             }
             void ValidateAssignment(AssignmentStatementNode node, uint currentScopeID, StringBuilder messageSB)
             {
-                if (!symbolTable.TryGetSymbolInfo(currentScopeID, node.Identifier.Value, out SymbolInfo? info))
+                if (!SymbolTable.TryGetSymbolInfo(currentScopeID, node.Identifier.Value, out SymbolInfo? info))
                 {
                     hasFailed = true;
                     messageSB.AppendLine($"\t[{node.StartLine}.{node.StartChar}-{node.EndLine}.{node.EndChar}] "
@@ -329,16 +351,6 @@ namespace Compiler.SemanticAnalysis
                     hasFailed = true;
                     messageSB.AppendLine($"\t[{node.StartLine}.{node.StartChar}-{node.EndLine}.{node.EndChar}] "
                         + $"Cannot assign type of '{assignedType}' to variable {info.Name} of type '{info.Type}'");
-                }
-            }
-            void ValidateFunctionCall(FunctionCallStatementNode node, uint currentScopeID, StringBuilder messageSB)
-            {
-                if (!symbolTable.TryGetSymbolInfo(currentScopeID, node.FunctionCallExpression.Identifier.Value, out SymbolInfo? info))
-                {
-                    hasFailed = true;
-                    messageSB.AppendLine($"\t[{node.StartLine}.{node.StartChar}-{node.EndLine}.{node.EndChar}] "
-                        + $"Function '{node.FunctionCallExpression.Identifier.Value}' is not defined in the current context!");
-                    return;
                 }
             }
         }
@@ -418,7 +430,7 @@ namespace Compiler.SemanticAnalysis
             }
             else if (node is IdentifierLeaf identifier)
             {
-                if (symbolTable.TryGetSymbolInfo(currentScopeID, identifier.Value, out SymbolInfo? info)) return info.Type;
+                if (SymbolTable.TryGetSymbolInfo(currentScopeID, identifier.Value, out SymbolInfo? info)) return info.Type;
 
                 throw new InvalidOperationException($"Scope check failed! Encountered undefined identifier: {identifier}");
             }
@@ -432,14 +444,43 @@ namespace Compiler.SemanticAnalysis
             }
             else if (node is FunctionCallExpressionNode funcCallExpr)
             {
-                if (!symbolTable.TryGetSymbolInfo(currentScopeID, funcCallExpr.Identifier.Value, out SymbolInfo? info))
-                    throw new InvalidOperationException($"Scope check pass failed! Encountered undefined function identifier: {funcCallExpr.Identifier.Value}");
+                string name = funcCallExpr.Identifier.Value;
+                var arguments = funcCallExpr.ArgumentList.Children;
 
-                return info.Type;
+                if (!SymbolTable.TryGetFunctionInfo(currentScopeID, name, out FunctionInfo? funcInfo))
+                    throw new InvalidOperationException($"Scope check failed! Encountered undefined function: {name}");
+
+                if (arguments.Count < funcInfo.ParameterInfos.Count)
+                {
+                    messageSB.AppendLine($"\t[{funcCallExpr.StartLine}.{funcCallExpr.StartChar}-{funcCallExpr.EndLine}.{funcCallExpr.EndChar}] "
+                        + $"Function call '{name}' expects {funcInfo.ParameterInfos.Count} arguments, but only {arguments.Count} were provided.");
+                }
+                else
+                {
+                    for (int i = 0; i < funcInfo.ParameterInfos.Count; i++)
+                    {
+                        SyntaxNode? arg = arguments[i];
+
+                        string argType = ResolveType(arg, currentScopeID, messageSB);
+
+                        if (funcInfo.ParameterInfos[0].Type != argType)
+                        {
+                            messageSB.AppendLine($"\t[{arg.StartLine}.{arg.StartChar}-{arg.EndLine}.{arg.EndChar}] "
+                                + $"Function argument of type '{argType}' does not match expected type '{funcInfo.ParameterInfos[0].Type}' for the parameter '{funcInfo.ParameterInfos[0].Name}'.");
+                        }
+                    }
+                    if (arguments.Count > funcInfo.ParameterInfos.Count)
+                    {
+                        messageSB.AppendLine($"\t[{funcCallExpr.StartLine}.{funcCallExpr.StartChar}-{funcCallExpr.EndLine}.{funcCallExpr.EndChar}] "
+                            + $"Function call '{name}' expects {funcInfo.ParameterInfos.Count} arguments, but {arguments.Count} were provided.");
+                    }
+                }
+
+                return funcInfo.SymbolInfo.Type;
             }
             else throw new NotImplementedException("Node type not supported for type resolution: " + node.GetType().Name);
         }
 
-        public string GetPrintable() => symbolTable.GetPrintable();
+        public string GetPrintable() => SymbolTable.GetPrintable();
     }
 }

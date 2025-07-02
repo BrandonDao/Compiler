@@ -1,4 +1,5 @@
 using CompilerLib.Parser.Nodes.Types;
+using static CompilerLib.SymbolTable;
 
 namespace CompilerLib
 {
@@ -18,6 +19,9 @@ namespace CompilerLib
             // ldc_i4_7 = 0x1D,
             // ldc_i4_8 = 0x1E,
             #endregion Load Constants
+
+            call = 0x28,
+            ret = 0x2A,
 
             #region Math
             add = 0x58,
@@ -123,5 +127,11 @@ namespace CompilerLib
                     throw new NotImplementedException();
             }
         }
+        public string Emit(OpCode opCode, string returnType, string funcName, params string[] parameters)
+            => opCode switch
+            {
+                OpCode.call => $"call {returnType} {funcName}{string.Join(", ", parameters)}",
+                _ => throw new NotImplementedException(),
+            };
     }
 }

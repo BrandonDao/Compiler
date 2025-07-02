@@ -40,7 +40,7 @@ namespace CompilerLib.Parser.Nodes.Scopes
         : BlockNode(openBrace, statements, closeBrace),
         IGeneratesCode
     {
-        public abstract void GenerateILCode(ILGenerator ilGen, StringBuilder codeBuilder, int indentLevel);
+        public abstract void GenerateILCode(ILGenerator ilGen, SymbolTable symbolTable, StringBuilder codeBuilder, int indentLevel);
     }
 
     public class FunctionBlockNode(OpenBraceLeaf openBrace, List<SyntaxNode> statements, CloseBraceLeaf closeBrace)
@@ -49,7 +49,7 @@ namespace CompilerLib.Parser.Nodes.Scopes
         public bool IsEntryPoint { get; set; } = false;
         public ScopeInfo? ScopeInfo { get; set; }
 
-        public override void GenerateILCode(ILGenerator ilGen, StringBuilder codeBuilder, int indentLevel)
+        public override void GenerateILCode(ILGenerator ilGen, SymbolTable symbolTable, StringBuilder codeBuilder, int indentLevel)
         {
             if (ScopeInfo == null) throw new InvalidOperationException("Function Scope Info missing!");
 
@@ -81,6 +81,22 @@ namespace CompilerLib.Parser.Nodes.Scopes
                     }
                     statementInfos.Add((ilGen.Emit(OpCode.stloc, localIdToIndex[varDefNode.NameTypeNode.Name]), indentLevel));
                 }
+                // else if (child is FunctionCallStatementNode funcCallNode)
+                // {
+                //     var f = funcCallNode.FunctionCallExpression;
+
+                //     if (!symbolTable.TryGetSymbolInfo(ScopeInfo.ID, f.Identifier.Value, out SymbolInfo? functionInfo))
+                //         throw new InvalidOperationException($"Function '{f.Identifier}' not found in symbol table!");
+
+                //     List<string> parameters = [];
+                //     foreach (var param in f.ArgumentList.Children)
+                //     {
+
+                //     }
+
+
+                //     statementInfos.Add((ilGen.Emit(OpCode.call, functionInfo, f.ArgumentList), indentLevel))
+                // }
                 else throw new NotImplementedException();
             }
 
@@ -117,14 +133,14 @@ namespace CompilerLib.Parser.Nodes.Scopes
     {
         private readonly List<SyntaxNode> innerStatements = statements;
 
-        public override void GenerateILCode(ILGenerator ilGen, StringBuilder codeBuilder, int indentLevel)
+        public override void GenerateILCode(ILGenerator ilGen, SymbolTable symbolTable, StringBuilder codeBuilder, int indentLevel)
         {
             indentLevel++;
             foreach (var child in innerStatements)
             {
                 if (child is FunctionDefinitionNode functionDef)
                 {
-                    functionDef.GenerateILCode(ilGen, codeBuilder, indentLevel);
+                    functionDef.GenerateILCode(ilGen, symbolTable, codeBuilder, indentLevel);
                 }
                 else throw new NotImplementedException();
             }

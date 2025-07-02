@@ -4,6 +4,6 @@ namespace CompilerLib.Parser.Nodes
 {
     public interface IGeneratesCode
     {
-        public void GenerateILCode(ILGenerator ilGen, StringBuilder codeBuilder, int indentLevel);
+        public void GenerateILCode(ILGenerator ilGen, SymbolTable symbolTable, StringBuilder codeBuilder, int indentLevel);
     }
 }

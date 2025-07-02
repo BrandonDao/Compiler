@@ -58,7 +58,7 @@ namespace Compiler
             Console.WriteLine("\nCODE GENERATION");
             StringBuilder codeBuilder = new();
             ILGenerator iLGenerator = new();
-            astRoot.GenerateILCode(iLGenerator, codeBuilder, indentLevel: 0);
+            astRoot.GenerateILCode(iLGenerator, analyzer.SymbolTable, codeBuilder, indentLevel: 0);
 
             string generatedIL = codeBuilder.ToString();
             Console.WriteLine(generatedIL);
