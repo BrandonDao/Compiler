@@ -135,6 +135,7 @@ namespace Compiler.SemanticAnalysis
                         scopeContainer.Block.ID = scopeID;
                         funcDefNode.FunctionBlockNode.ScopeInfo = funcInfo.ChildScopeInfo;
                         BuildSymbolTable(scopeContainer.Block, scopeID++, symbolPosition: 0, isScopeContainerLocal);
+                        funcDefNode.FunctionInfo = funcInfo;
                         return;
                     }
 

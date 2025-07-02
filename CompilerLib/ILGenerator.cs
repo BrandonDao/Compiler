@@ -1,3 +1,6 @@
+using CompilerLib.Parser.Nodes;
+using CompilerLib.Parser.Nodes.Functions;
+using CompilerLib.Parser.Nodes.Operators;
 using CompilerLib.Parser.Nodes.Types;
 using static CompilerLib.SymbolTable;
 
@@ -7,6 +10,7 @@ namespace CompilerLib
     {
         public enum OpCode
         {
+            nop = 0x00,
             #region Load Constants
             ldc_i4 = 0x20,
             // ldc_i4_0 = 0x16,
@@ -70,6 +74,7 @@ namespace CompilerLib
         {
             switch (opCode)
             {
+                case OpCode.nop: return "nop";
                 case OpCode.add: PopStack(); return "add";
                 case OpCode.sub: PopStack(); return "sub";
                 case OpCode.mul: PopStack(); return "mul";
@@ -127,11 +132,61 @@ namespace CompilerLib
                     throw new NotImplementedException();
             }
         }
-        public string Emit(OpCode opCode, string returnType, string funcName, params string[] parameters)
+        public string Emit(OpCode opCode, string funcName, string returnType, IEnumerable<string> parameters)
             => opCode switch
             {
-                OpCode.call => $"call {returnType} {funcName}{string.Join(", ", parameters)}",
+                OpCode.call => $"call {returnType} Program::'{funcName}'({string.Join(", ", parameters)})",
                 _ => throw new NotImplementedException(),
             };
+
+
+
+        public static void ResolveOperand(ILGenerator ilGen, SymbolTable symbolTable, uint scopeID, List<(string, int)> statementInfos, int indentLevel, Dictionary<string, int> localIdToIndex, SyntaxNode operand)
+        {
+            if (operand is IdentifierLeaf identifier)
+            {
+                LoadIdentifier(ilGen, statementInfos, indentLevel, localIdToIndex, identifier);
+            }
+            else if (operand is ValueOperationNode valueOpNode)
+            {
+                valueOpNode.GenerateCode(ilGen, symbolTable, scopeID, statementInfos, indentLevel, localIdToIndex);
+            }
+            else if (operand is LiteralLeaf literal)
+            {
+                if (literal is IntLiteralLeaf intLiteral)
+                {
+                    statementInfos.Add((ilGen.Emit(OpCode.ldc_i4, intLiteral.Value), indentLevel));
+                }
+                else throw new NotImplementedException();
+            }
+            else if (operand is FunctionCallExpressionNode funcCallExpr)
+            {
+                if (!symbolTable.TryGetFunctionInfo(scopeID, funcCallExpr.Identifier.Value, out FunctionInfo? funcInfo))
+                    throw new InvalidOperationException($"Function '{funcCallExpr.Identifier}' not found in symbol table!");
+
+                List<string> parameterTypes = [];
+                foreach (var param in funcInfo.ParameterInfos)
+                {
+                    if (!PrimitiveNameMap.TryGetValue(param.Type, out string? typeName))
+                    {
+                        typeName = param.Type;
+                    }
+                    parameterTypes.Add(typeName);
+                }
+                foreach (SyntaxNode argument in funcCallExpr.ArgumentList.Children)
+                {
+                    ResolveOperand(ilGen, symbolTable, scopeID, statementInfos, indentLevel, localIdToIndex, argument);
+                }
+                statementInfos.Add((ilGen.Emit(OpCode.call, funcInfo.SymbolInfo.Name, funcInfo.SymbolInfo.Type, parameterTypes), indentLevel));
+            }
+            else throw new NotImplementedException($"Unsupported operand type: {operand.GetType().Name}");
+        }
+        public static void LoadIdentifier(ILGenerator ilGen, List<(string, int)> statementInfos, int indentLevel, Dictionary<string, int> localIdToIndex, IdentifierLeaf identifier)
+        {
+            if (!localIdToIndex.TryGetValue(identifier.Value, out int index))
+                throw new NotImplementedException($"Non-local identifiers unsupported!");
+
+            statementInfos.Add((ilGen.Emit(OpCode.ldloc, index), indentLevel));
+        }
     }
 }

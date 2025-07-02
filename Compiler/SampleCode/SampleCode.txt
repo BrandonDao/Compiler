@@ -5,7 +5,7 @@ namespace Program.ExtendedName
         let one: i32 = 1;
         let two: i32 = 2 + one * (one / one - one);
 
-        let three:i16 = add(1, two);;
+        add(1, two);;
     }
 
     func add(a:i32, b:i32)

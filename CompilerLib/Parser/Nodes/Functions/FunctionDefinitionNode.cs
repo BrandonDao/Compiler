@@ -1,6 +1,7 @@
 using System.Text;
 using CompilerLib.Parser.Nodes.Scopes;
 using CompilerLib.Parser.Nodes.Types;
+using static CompilerLib.SymbolTable;
 
 namespace CompilerLib.Parser.Nodes.Functions
 {
@@ -8,6 +9,7 @@ namespace CompilerLib.Parser.Nodes.Functions
         SyntaxNode,
         IContainsScopeNode, IGeneratesCode
     {
+        public FunctionInfo? FunctionInfo { get; set; }
         public string Name { get; }
         public ParameterListNode ParameterList { get; }
         public BlockNode Block => FunctionBlockNode;
@@ -52,15 +54,36 @@ namespace CompilerLib.Parser.Nodes.Functions
             else
             {
                 codeBuilder.AppendIndentedLine($".method public hidebysig static", indentLevel);
-                if (ILGenerator.PrimitiveNameMap.TryGetValue(ReturnTypeName, out var primitiveTypeName))
+                if (ILGenerator.PrimitiveNameMap.TryGetValue(ReturnTypeName, out var retPrimitiveTypeName))
                 {
-                    codeBuilder.AppendIndented(primitiveTypeName, indentLevel + 1);
+                    codeBuilder.AppendIndented(retPrimitiveTypeName, indentLevel + 1);
                 }
                 else
                 {
                     codeBuilder.AppendIndented(ReturnTypeName, indentLevel + 1);
                 }
-                codeBuilder.AppendLine($" '{Name}' () cil managed");
+                codeBuilder.AppendLine($" '{Name}' (");
+
+                if (FunctionInfo == null) throw new InvalidOperationException("FunctionInfo is not set for IL code generation! SymbolTable may not have been built correctly.");
+
+                for (int i = 0; true; i++)
+                {
+                    SymbolInfo param = FunctionInfo.ParameterInfos[i];
+                    if (ILGenerator.PrimitiveNameMap.TryGetValue(param.Type, out var paramPrimitiveTypeName))
+                    {
+                        codeBuilder.AppendIndented($"{paramPrimitiveTypeName} {param.Name}", indentLevel + 1);
+                    }
+                    else
+                    {
+                        codeBuilder.AppendIndented($"{param.Type} {param.Name}", indentLevel + 1);
+                    }
+                    if (i + 1 < FunctionInfo.ParameterInfos.Count)
+                    {
+                        codeBuilder.AppendLine(", ");
+                    }
+                    else break;
+                }
+                codeBuilder.AppendLine(")");
             }
             codeBuilder.AppendIndentedLine("{", indentLevel);
             FunctionBlockNode.GenerateILCode(ilGen, symbolTable, codeBuilder, indentLevel);

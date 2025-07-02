@@ -73,30 +73,22 @@ namespace CompilerLib.Parser.Nodes.Scopes
                     switch (varDefNode.AssignedValue)
                     {
                         case ValueOperationNode valOp:
-                            valOp.GenerateCode(ilGen, statementInfos, indentLevel, localIdToIndex);
+                            valOp.GenerateCode(ilGen, symbolTable, ScopeInfo.ID, statementInfos, indentLevel, localIdToIndex);
                             break;
                         default:
-                            ValueOperationNode.ResolveOperand(ilGen, statementInfos, indentLevel, localIdToIndex, varDefNode.AssignedValue);
+                            ResolveOperand(ilGen, symbolTable, ScopeInfo.ID, statementInfos, indentLevel, localIdToIndex, varDefNode.AssignedValue);
                             break;
                     }
                     statementInfos.Add((ilGen.Emit(OpCode.stloc, localIdToIndex[varDefNode.NameTypeNode.Name]), indentLevel));
                 }
-                // else if (child is FunctionCallStatementNode funcCallNode)
-                // {
-                //     var f = funcCallNode.FunctionCallExpression;
-
-                //     if (!symbolTable.TryGetSymbolInfo(ScopeInfo.ID, f.Identifier.Value, out SymbolInfo? functionInfo))
-                //         throw new InvalidOperationException($"Function '{f.Identifier}' not found in symbol table!");
-
-                //     List<string> parameters = [];
-                //     foreach (var param in f.ArgumentList.Children)
-                //     {
-
-                //     }
-
-
-                //     statementInfos.Add((ilGen.Emit(OpCode.call, functionInfo, f.ArgumentList), indentLevel))
-                // }
+                else if (child is FunctionCallStatementNode funcCallNode)
+                {
+                    ResolveOperand(ilGen, symbolTable, ScopeInfo.ID, statementInfos, indentLevel, localIdToIndex, funcCallNode.FunctionCallExpression);
+                }
+                else if (child is EmptyStatementNode)
+                {
+                    statementInfos.Add((ilGen.Emit(OpCode.nop), indentLevel));
+                }
                 else throw new NotImplementedException();
             }
 
