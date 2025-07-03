@@ -12,6 +12,7 @@ namespace Program.ExtendedName
     func add(a:i32, b:i32)
     {
         let result: i32 = a + b;
+        debugPrint(result);
     }
     func add(a:i32)
     {

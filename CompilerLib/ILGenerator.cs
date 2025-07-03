@@ -163,7 +163,20 @@ namespace CompilerLib
             else if (operand is FunctionCallExpressionNode funcCallExpr)
             {
                 if (funcCallExpr.FunctionInfo == null)
+                {
+                    if(funcCallExpr.Identifier.Value == "debugPrint")
+                    {
+                        Console.WriteLine("DebugPrint function called! This is hardcoded for debugging purposes.");
+
+                        foreach (SyntaxNode argument in funcCallExpr.ArgumentList.Children)
+                        {
+                            ResolveOperand(ilGen, symbolTable, scopeID, statementInfos, indentLevel, localIdToIndex, argument);
+                        }
+                        statementInfos.Add(($"call {LanguageNames.Keywords.Void} [System.Console]System.Console::WriteLine(int32)", indentLevel));
+                        return;
+                    }
                     throw new NotImplementedException($"Semantic Analysis failed! Function call expression '{funcCallExpr.Identifier.Value}' does not have FunctionInfo set!");
+                }
 
                 List<string> parameterTypes = [];
                 foreach (var param in funcCallExpr.FunctionInfo.ParameterInfos)
