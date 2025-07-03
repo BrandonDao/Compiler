@@ -29,6 +29,7 @@ namespace CompilerLib.Parser.Nodes
         {
             codeBuilder.AppendIndentedLine(".assembly _ { }", indentLevel);
             codeBuilder.AppendIndentedLine(".assembly extern System.Runtime { }", indentLevel);
+            codeBuilder.AppendIndentedLine(".assembly extern System.Console { }", indentLevel);
             codeBuilder.AppendLine();
             codeBuilder.AppendIndentedLine(".class public auto ansi beforefieldinit Program", indentLevel);
             codeBuilder.AppendIndentedLine("extends [System.Runtime]System.Object", indentLevel + 1);
