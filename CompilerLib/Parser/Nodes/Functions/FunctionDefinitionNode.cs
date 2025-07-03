@@ -12,10 +12,10 @@ namespace CompilerLib.Parser.Nodes.Functions
         public FunctionInfo? FunctionInfo { get; set; }
         public string Name { get; }
         public ParameterListNode ParameterListNode { get; }
+        public FunctionBlockNode FunctionBlockNode { get; }
         public BlockNode Block => FunctionBlockNode;
         public string ReturnTypeName { get; }
 
-        public readonly FunctionBlockNode FunctionBlockNode;
 
         private FunctionDefinitionNode(FunctionKeywordLeaf func, IdentifierLeaf id, ParameterListNode parameterList, SyntaxNode arrow, LeafNode returnTypeNode, string returnTypeName, FunctionBlockNode body)
             : base([func, id, parameterList, arrow, returnTypeNode, body])
@@ -53,29 +53,31 @@ namespace CompilerLib.Parser.Nodes.Functions
             }
             else
             {
+                if (FunctionInfo == null) throw new InvalidOperationException("FunctionInfo is not set for IL code generation! SymbolTable may not have been built correctly.");
+
                 codeBuilder.AppendIndentedLine($".method public hidebysig static", indentLevel);
+                indentLevel++;
                 if (ILGenerator.PrimitiveNameMap.TryGetValue(ReturnTypeName, out var retPrimitiveTypeName))
                 {
-                    codeBuilder.AppendIndented(retPrimitiveTypeName, indentLevel + 1);
+                    codeBuilder.AppendIndented(retPrimitiveTypeName, indentLevel);
                 }
                 else
                 {
-                    codeBuilder.AppendIndented(ReturnTypeName, indentLevel + 1);
+                    codeBuilder.AppendIndented(ReturnTypeName, indentLevel);
                 }
                 codeBuilder.AppendLine($" '{Name}' (");
 
-                if (FunctionInfo == null) throw new InvalidOperationException("FunctionInfo is not set for IL code generation! SymbolTable may not have been built correctly.");
-
+                indentLevel++;
                 for (int i = 0; true; i++)
                 {
                     SymbolInfo param = FunctionInfo.ParameterInfos[i];
                     if (ILGenerator.PrimitiveNameMap.TryGetValue(param.Type, out var paramPrimitiveTypeName))
                     {
-                        codeBuilder.AppendIndented($"{paramPrimitiveTypeName} {param.Name}", indentLevel + 1);
+                        codeBuilder.AppendIndented($"{paramPrimitiveTypeName} {param.Name}", indentLevel);
                     }
                     else
                     {
-                        codeBuilder.AppendIndented($"{param.Type} {param.Name}", indentLevel + 1);
+                        codeBuilder.AppendIndented($"{param.Type} {param.Name}", indentLevel);
                     }
                     if (i + 1 < FunctionInfo.ParameterInfos.Count)
                     {
@@ -83,10 +85,15 @@ namespace CompilerLib.Parser.Nodes.Functions
                     }
                     else break;
                 }
-                codeBuilder.AppendLine(")");
+                codeBuilder.AppendLine();
+                indentLevel--;
+                codeBuilder.AppendIndentedLine(") cil managed", indentLevel);
+                indentLevel--;
+
             }
+
             codeBuilder.AppendIndentedLine("{", indentLevel);
-            FunctionBlockNode.GenerateILCode(ilGen, symbolTable, codeBuilder, indentLevel);
+            FunctionBlockNode.GenerateILCode(ilGen, symbolTable, codeBuilder, indentLevel + 1);
             codeBuilder.AppendIndentedLine($"}} // End of method '{Name}'\n", indentLevel);
         }
     }

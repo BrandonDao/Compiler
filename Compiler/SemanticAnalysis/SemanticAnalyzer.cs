@@ -126,7 +126,7 @@ namespace Compiler.SemanticAnalysis
 
                         FunctionInfo funcInfo = SymbolTable.AddFunction(scopeID, currentScopeID, funcDefNode);
                         funcDefNode.FunctionInfo = funcInfo;
-                        funcDefNode.FunctionBlockNode.ScopeInfo = funcInfo.ChildScopeInfo;
+                        funcDefNode.FunctionBlockNode.FunctionInfo = funcInfo;
                         scopeContainer.Block.ID = scopeID;
                         BuildSymbolTable(scopeContainer.Block, scopeID++, symbolPosition: 0, isScopeContainerLocal);
                         return;

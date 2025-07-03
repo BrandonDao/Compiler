@@ -35,6 +35,12 @@ namespace CompilerLib
             rem = 0x5C,
             #endregion Math
 
+            ldarg = 0xFE09,
+            // ldarg_0 = 0x02,
+            // ldarg_1 = 0x03,
+            // ldarg_2 = 0x04,
+            // ldarg_3 = 0x05,
+
             #region Locals
             ldloc = 0xFE0C,
             // ldloc_0 = 0x06,
@@ -128,6 +134,16 @@ namespace CompilerLib
                         2 => "ldloc.2",
                         3 => "ldloc.3",
                         _ => $"ldloc {value}",
+                    };
+                case OpCode.ldarg:
+                    PushStack();
+                    return value switch
+                    {
+                        0 => "ldarg.0",
+                        1 => "ldarg.1",
+                        2 => "ldarg.2",
+                        3 => "ldarg.3",
+                        _ => $"ldarg {value}",
                     };
                 default:
                     throw new NotImplementedException();

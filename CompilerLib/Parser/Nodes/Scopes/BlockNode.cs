@@ -46,22 +46,33 @@ namespace CompilerLib.Parser.Nodes.Scopes
     public class FunctionBlockNode(OpenBraceLeaf openBrace, List<SyntaxNode> statements, CloseBraceLeaf closeBrace)
         : CodeGenBlockNode(openBrace, statements, closeBrace)
     {
+        public FunctionInfo? FunctionInfo { get; set; }
         public bool IsEntryPoint { get; set; } = false;
-        public ScopeInfo? ScopeInfo { get; set; }
 
         public override void GenerateILCode(ILGenerator ilGen, SymbolTable symbolTable, StringBuilder codeBuilder, int indentLevel)
         {
-            if (ScopeInfo == null) throw new InvalidOperationException("Function Scope Info missing!");
-
-            indentLevel++;
+            if (FunctionInfo == null) throw new InvalidOperationException("Function Info missing! Semantic analysis failed!");
 
             ilGen.ResetStackTracking();
             List<(string statement, int indentLevel)> statementInfos = [];
 
-            Dictionary<string, int> localIdToIndex = new(capacity: ScopeInfo.SymbolInfoByName.Count);
-            List<SymbolInfo> locals = new(capacity: ScopeInfo.SymbolInfoByName.Count);
-            foreach (KeyValuePair<string, SymbolInfo> kvp in ScopeInfo.SymbolInfoByName)
+            List<SymbolInfo> locals = new(capacity: FunctionInfo.ChildScopeInfo.SymbolInfoByName.Count);
+            Dictionary<string, int> localIdToIndex = new(capacity: FunctionInfo.ChildScopeInfo.SymbolInfoByName.Count);
+
+            for (int i = 0; i < FunctionInfo.ParameterInfos.Count; i++)
             {
+                SymbolInfo param = FunctionInfo.ParameterInfos[i];
+
+                localIdToIndex.Add(param.Name, i);
+                locals.Add(param);
+                statementInfos.Add((ilGen.Emit(OpCode.ldarg, i), indentLevel));
+                statementInfos.Add((ilGen.Emit(OpCode.stloc, i), indentLevel));
+            }
+
+            foreach (KeyValuePair<string, SymbolInfo> kvp in FunctionInfo.ChildScopeInfo.SymbolInfoByName)
+            {
+                if (FunctionInfo.ParameterInfos.Any(p => p.Name == kvp.Key)) continue;
+
                 localIdToIndex.Add(kvp.Key, locals.Count);
                 locals.Add(kvp.Value);
             }
@@ -73,17 +84,17 @@ namespace CompilerLib.Parser.Nodes.Scopes
                     switch (varDefNode.AssignedValue)
                     {
                         case ValueOperationNode valOp:
-                            valOp.GenerateCode(ilGen, symbolTable, ScopeInfo.ID, statementInfos, indentLevel, localIdToIndex);
+                            valOp.GenerateCode(ilGen, symbolTable, FunctionInfo.ChildScopeInfo.ID, statementInfos, indentLevel, localIdToIndex);
                             break;
                         default:
-                            ResolveOperand(ilGen, symbolTable, ScopeInfo.ID, statementInfos, indentLevel, localIdToIndex, varDefNode.AssignedValue);
+                            ResolveOperand(ilGen, symbolTable, FunctionInfo.ChildScopeInfo.ID, statementInfos, indentLevel, localIdToIndex, varDefNode.AssignedValue);
                             break;
                     }
                     statementInfos.Add((ilGen.Emit(OpCode.stloc, localIdToIndex[varDefNode.NameTypeNode.Name]), indentLevel));
                 }
                 else if (child is FunctionCallStatementNode funcCallNode)
                 {
-                    ResolveOperand(ilGen, symbolTable, ScopeInfo.ID, statementInfos, indentLevel, localIdToIndex, funcCallNode.FunctionCallExpression);
+                    ResolveOperand(ilGen, symbolTable, FunctionInfo.ChildScopeInfo.ID, statementInfos, indentLevel, localIdToIndex, funcCallNode.FunctionCallExpression);
                 }
                 else if (child is EmptyStatementNode)
                 {
@@ -98,7 +109,7 @@ namespace CompilerLib.Parser.Nodes.Scopes
                 codeBuilder.AppendIndentedLine(".entrypoint // CURRENTLY DETERMINED ONLY BY METHOD NAME", indentLevel);
             }
 
-            codeBuilder.AppendIndentedLine(".locals init ( // ONLY SUPPORTED TYPES ARE: INT32", indentLevel);
+            codeBuilder.AppendIndentedLine(".locals init ( // ONLY SUPPORTED TYPES ARE: INT32, BOOL", indentLevel);
             indentLevel++;
             for (int i = 0; i < locals.Count - 1; i++)
             {
