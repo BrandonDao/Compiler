@@ -45,11 +45,11 @@ namespace Compiler.SemanticAnalysis
 
         private bool RegisterPrimitives(SyntaxNode _, StringBuilder messageSB)
         {
-            SymbolTable.AddSymbol(scopeID: 0, symbolPosition: -1, PrimitiveTypeNames.Int8, PrimitiveTypeNames.Int8);
-            SymbolTable.AddSymbol(scopeID: 0, symbolPosition: -1, PrimitiveTypeNames.Int16, PrimitiveTypeNames.Int16);
-            SymbolTable.AddSymbol(scopeID: 0, symbolPosition: -1, PrimitiveTypeNames.Int32, PrimitiveTypeNames.Int32);
-            SymbolTable.AddSymbol(scopeID: 0, symbolPosition: -1, PrimitiveTypeNames.Int64, PrimitiveTypeNames.Int64);
-            SymbolTable.AddSymbol(scopeID: 0, symbolPosition: -1, PrimitiveTypeNames.Bool, PrimitiveTypeNames.Bool);
+            SymbolTable.AddSymbol(scopeID: 0, symbolPosition: -1, LanguageNames.Primitives.Int8, LanguageNames.Primitives.Int8);
+            SymbolTable.AddSymbol(scopeID: 0, symbolPosition: -1, LanguageNames.Primitives.Int16, LanguageNames.Primitives.Int16);
+            SymbolTable.AddSymbol(scopeID: 0, symbolPosition: -1, LanguageNames.Primitives.Int32, LanguageNames.Primitives.Int32);
+            SymbolTable.AddSymbol(scopeID: 0, symbolPosition: -1, LanguageNames.Primitives.Int64, LanguageNames.Primitives.Int64);
+            SymbolTable.AddSymbol(scopeID: 0, symbolPosition: -1, LanguageNames.Primitives.Bool, LanguageNames.Primitives.Bool);
 
             messageSB.AppendLine("Primitive types registered successfully.");
             return true;
@@ -193,7 +193,7 @@ namespace Compiler.SemanticAnalysis
                         {
                             string conditionType = ResolveType(whileNode.Condition, currentScopeID, messageSB);
 
-                            if (conditionType != PrimitiveTypeNames.Bool)
+                            if (conditionType != LanguageNames.Primitives.Bool)
                             {
                                 hasFailed = true;
                                 messageSB.AppendLine($"\t[{whileNode.StartLine}.{whileNode.StartChar}-{whileNode.EndLine}.{whileNode.EndChar}] "
@@ -366,7 +366,7 @@ namespace Compiler.SemanticAnalysis
                     {
                         string type = ResolveType(notOp.Operand, currentScopeID, messageSB);
 
-                        if (type != PrimitiveTypeNames.Bool)
+                        if (type != LanguageNames.Primitives.Bool)
                         {
                             messageSB.AppendLine($"\t[{notOp.StartLine}.{notOp.StartChar}-{notOp.EndLine}.{notOp.EndChar}] "
                                 + $"Operator '!' cannot be applied to operand of type {type}");
@@ -382,8 +382,8 @@ namespace Compiler.SemanticAnalysis
                         string lhsType = ResolveType(highOp.LeftOperand, currentScopeID, messageSB);
                         string rhsType = ResolveType(highOp.RightOperand, currentScopeID, messageSB);
 
-                        if (lhsType is not (PrimitiveTypeNames.Int8 or PrimitiveTypeNames.Int16 or PrimitiveTypeNames.Int32 or PrimitiveTypeNames.Int64)
-                        || rhsType is not (PrimitiveTypeNames.Int8 or PrimitiveTypeNames.Int16 or PrimitiveTypeNames.Int32 or PrimitiveTypeNames.Int64))
+                        if (lhsType is not (LanguageNames.Primitives.Int8 or LanguageNames.Primitives.Int16 or LanguageNames.Primitives.Int32 or LanguageNames.Primitives.Int64)
+                        || rhsType is not (LanguageNames.Primitives.Int8 or LanguageNames.Primitives.Int16 or LanguageNames.Primitives.Int32 or LanguageNames.Primitives.Int64))
                         {
                             messageSB.AppendLine($"\t[{highOp.StartLine}.{highOp.StartChar}-{highOp.EndLine}.{highOp.EndChar}] "
                                 + $"Operator '{highOp.Operator}' cannot be applied to operands of type {lhsType} and {rhsType}");
@@ -397,8 +397,8 @@ namespace Compiler.SemanticAnalysis
                             string lhsType = ResolveType(lowOp.LeftOperand, currentScopeID, messageSB);
                             string rhsType = ResolveType(lowOp.RightOperand, currentScopeID, messageSB);
 
-                            if (lhsType is not (PrimitiveTypeNames.Int8 or PrimitiveTypeNames.Int16 or PrimitiveTypeNames.Int32 or PrimitiveTypeNames.Int64)
-                            || rhsType is not (PrimitiveTypeNames.Int8 or PrimitiveTypeNames.Int16 or PrimitiveTypeNames.Int32 or PrimitiveTypeNames.Int64))
+                            if (lhsType is not (LanguageNames.Primitives.Int8 or LanguageNames.Primitives.Int16 or LanguageNames.Primitives.Int32 or LanguageNames.Primitives.Int64)
+                            || rhsType is not (LanguageNames.Primitives.Int8 or LanguageNames.Primitives.Int16 or LanguageNames.Primitives.Int32 or LanguageNames.Primitives.Int64))
                             {
                                 messageSB.AppendLine($"\t[{lowOp.StartLine}.{lowOp.StartChar}-{lowOp.EndLine}.{lowOp.EndChar}] "
                                     + $"Operator '{lowOp.Operator}' cannot be applied to operands of type {lhsType} and {rhsType}");
@@ -410,7 +410,7 @@ namespace Compiler.SemanticAnalysis
                             string lhsType = ResolveType(lowOp.LeftOperand, currentScopeID, messageSB);
                             string rhsType = ResolveType(lowOp.RightOperand, currentScopeID, messageSB);
 
-                            if (lhsType != PrimitiveTypeNames.Bool || rhsType != PrimitiveTypeNames.Bool)
+                            if (lhsType != LanguageNames.Primitives.Bool || rhsType != LanguageNames.Primitives.Bool)
                             {
                                 messageSB.AppendLine($"\t[{lowOp.StartLine}.{lowOp.StartChar}-{lowOp.EndLine}.{lowOp.EndChar}] "
                                     + $"Operator '{lowOp.Operator}' cannot be applied to operands of type {lhsType} and {rhsType}");
@@ -421,7 +421,7 @@ namespace Compiler.SemanticAnalysis
                         {
                             ResolveType(lowOp.LeftOperand, currentScopeID, messageSB);
                             ResolveType(lowOp.RightOperand, currentScopeID, messageSB);
-                            return PrimitiveTypeNames.Bool;
+                            return LanguageNames.Primitives.Bool;
                         }
                         throw new NotImplementedException("Low precedence binary operation not implemented: " + node.GetType().Name);
                     }
@@ -437,9 +437,9 @@ namespace Compiler.SemanticAnalysis
             }
             else if (node is LiteralLeaf)
             {
-                if (node is IntLiteralLeaf) return PrimitiveTypeNames.Int32;
+                if (node is IntLiteralLeaf) return LanguageNames.Primitives.Int32;
 
-                if (node is BoolLiteralLeaf) return PrimitiveTypeNames.Bool;
+                if (node is BoolLiteralLeaf) return LanguageNames.Primitives.Bool;
 
                 throw new NotImplementedException("Node type not supported for type resolution: " + node.GetType().Name);
             }

@@ -1,8 +1,8 @@
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Reflection;
 using CompilerLib.Lexer;
 using CompilerLib.Parser.Nodes;
-using System.Text;
 using CompilerLib.Parser.Nodes.Operators;
 using CompilerLib.Parser.Nodes.Punctuation;
 using CompilerLib.Parser.Nodes.Statements.Controls;
@@ -15,16 +15,16 @@ namespace Compiler
     {
         private static readonly TokenDefinition[] tokenDefinitions =
         [
-            new(LexPriority.PrimitiveOrKeyword, @"\b(int8|i8)\b", (v, sl, sc, el, ec) => new Int8Leaf(v, sl, sc, el, ec)),
-            new(LexPriority.PrimitiveOrKeyword, @"\b(int16|i16)\b", (v, sl, sc, el, ec) => new Int16Leaf(v, sl, sc, el, ec)),
-            new(LexPriority.PrimitiveOrKeyword, @"\b(int32|i32)\b", (v, sl, sc, el, ec) => new Int32Leaf(v, sl, sc, el, ec)),
-            new(LexPriority.PrimitiveOrKeyword, @"\b(int64|i64)\b", (v, sl, sc, el, ec) => new Int64Leaf(v, sl, sc, el, ec)),
-            new(LexPriority.PrimitiveOrKeyword, @"\bbool\b", (v, sl, sc, el, ec) => new BoolLeaf(v, sl, sc, el, ec)),
-            new(LexPriority.PrimitiveOrKeyword, @"\bvoid\b", (v, sl, sc, el, ec) => new VoidLeaf(v, sl, sc, el, ec)),
-            new(LexPriority.PrimitiveOrKeyword, @"\blet\b", (v, sl, sc, el, ec) => new LetKeywordLeaf(v, sl, sc, el, ec)),
-            new(LexPriority.PrimitiveOrKeyword, @"\bwhile\b", (v, sl, sc, el, ec) => new WhileKeywordLeaf(v, sl, sc, el, ec)),
-            new(LexPriority.PrimitiveOrKeyword, @"\b(func|fn)\b", (v, sl, sc, el, ec) => new FunctionKeywordLeaf(v, sl, sc, el, ec)),
-            new(LexPriority.PrimitiveOrKeyword, @"\bnamespace\b", (v, sl, sc, el, ec) => new NamespaceKeywordLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.PrimitiveOrKeyword, @$"\b({LanguageNames.Primitives.Int8}|i8)\b", (v, sl, sc, el, ec) => new Int8Leaf(v, sl, sc, el, ec)),
+            new(LexPriority.PrimitiveOrKeyword, @$"\b({LanguageNames.Primitives.Int16}|i16)\b", (v, sl, sc, el, ec) => new Int16Leaf(v, sl, sc, el, ec)),
+            new(LexPriority.PrimitiveOrKeyword, @$"\b({LanguageNames.Primitives.Int32}|i32)\b", (v, sl, sc, el, ec) => new Int32Leaf(v, sl, sc, el, ec)),
+            new(LexPriority.PrimitiveOrKeyword, @$"\b({LanguageNames.Primitives.Int64}|i64)\b", (v, sl, sc, el, ec) => new Int64Leaf(v, sl, sc, el, ec)),
+            new(LexPriority.PrimitiveOrKeyword, @$"\b{LanguageNames.Primitives.Bool}\b", (v, sl, sc, el, ec) => new BoolLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.PrimitiveOrKeyword, @$"\b{LanguageNames.Keywords.Void}\b", (v, sl, sc, el, ec) => new VoidLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.PrimitiveOrKeyword, @$"\b{LanguageNames.Keywords.Let}\b", (v, sl, sc, el, ec) => new LetKeywordLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.PrimitiveOrKeyword, @$"\b{LanguageNames.Keywords.While}\b", (v, sl, sc, el, ec) => new WhileKeywordLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.PrimitiveOrKeyword, @$"\b({LanguageNames.Keywords.Func}|fn)\b", (v, sl, sc, el, ec) => new FunctionKeywordLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.PrimitiveOrKeyword, @$"\b{LanguageNames.Keywords.Namespace}\b", (v, sl, sc, el, ec) => new NamespaceKeywordLeaf(v, sl, sc, el, ec)),
 
             new(LexPriority.PrimaryPunctuation, @";", (v, sl, sc, el, ec) => new SemicolonLeaf(v, sl, sc, el, ec)),
             new(LexPriority.PrimaryPunctuation, @":", (v, sl, sc, el, ec) => new ColonLeaf(v, sl, sc, el, ec)),
@@ -45,7 +45,7 @@ namespace Compiler
             new(LexPriority.SecondaryOperator, @"!", (v, sl, sc, el, ec) => new NotOperatorLeaf(v, sl, sc, el, ec)),
 
             new(LexPriority.Literal, @"\b\d+\b", (v, sl, sc, el, ec) => new IntLiteralLeaf(v, sl, sc, el, ec)),
-            new(LexPriority.Literal, @"\b(true|false)\b", (v, sl, sc, el, ec) => new BoolLiteralLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.Literal, @$"\b({LanguageNames.Literals.True}|{LanguageNames.Literals.False})\b", (v, sl, sc, el, ec) => new BoolLiteralLeaf(v, sl, sc, el, ec)),
 
             new(LexPriority.Whitespace  , @"\s+", (v, sl, sc, el, ec) => new WhitespaceLeaf(v, sl, sc, el, ec)),
 

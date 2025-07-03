@@ -31,7 +31,7 @@ namespace CompilerLib.Parser.Nodes.Functions
         public FunctionDefinitionNode(FunctionKeywordLeaf func, IdentifierLeaf id, ParameterListNode parameterList, SyntaxNode arrow, TypeLeafNode returnType, FunctionBlockNode body)
             : this(func, id, parameterList, arrow, returnType, returnType.TypeName, body) { }
         public FunctionDefinitionNode(FunctionKeywordLeaf func, IdentifierLeaf id, ParameterListNode parameterList, SyntaxNode arrow, VoidLeaf voidReturnType, FunctionBlockNode body)
-            : this(func, id, parameterList, arrow, voidReturnType, "void", body) { }
+            : this(func, id, parameterList, arrow, voidReturnType, LanguageNames.Keywords.Void, body) { }
 
         public override SyntaxNode ToAST()
         {

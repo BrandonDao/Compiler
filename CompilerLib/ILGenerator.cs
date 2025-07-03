@@ -51,7 +51,8 @@ namespace CompilerLib
 
         public static Dictionary<string, string> PrimitiveNameMap { get; } = new()
         {
-            [PrimitiveTypeNames.Int32] = "int32"
+            [LanguageNames.Primitives.Int32] = "int32",
+            [LanguageNames.Primitives.Bool] = "bool"
         };
 
 

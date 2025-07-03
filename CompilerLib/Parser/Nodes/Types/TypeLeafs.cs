@@ -1,14 +1,5 @@
 namespace CompilerLib.Parser.Nodes.Types
 {
-    public static class PrimitiveTypeNames
-    {
-        public const string Int8 = "int8";
-        public const string Int16 = "int16";
-        public const string Int32 = "int32";
-        public const string Int64 = "int64";
-        public const string Bool = "bool";
-    }
-
     public abstract class TypeLeafNode(string value, int startLine, int startChar, int endLine, int endChar)
         : LeafNode(value, startLine, startChar, endLine, endChar)
     {
@@ -20,27 +11,27 @@ namespace CompilerLib.Parser.Nodes.Types
     public class Int8Leaf(string value, int startLine, int startChar, int endLine, int endChar)
         : PrimitiveLeaf(value, startLine, startChar, endLine, endChar)
     {
-        public override string TypeName => PrimitiveTypeNames.Int8;
+        public override string TypeName => LanguageNames.Primitives.Int8;
     }
     public class Int16Leaf(string value, int startLine, int startChar, int endLine, int endChar)
         : PrimitiveLeaf(value, startLine, startChar, endLine, endChar)
     {
-        public override string TypeName => PrimitiveTypeNames.Int16;
+        public override string TypeName => LanguageNames.Primitives.Int16;
     }
     public class Int32Leaf(string value, int startLine, int startChar, int endLine, int endChar)
         : PrimitiveLeaf(value, startLine, startChar, endLine, endChar)
     {
-        public override string TypeName => PrimitiveTypeNames.Int32;
+        public override string TypeName => LanguageNames.Primitives.Int32;
     }
     public class Int64Leaf(string value, int startLine, int startChar, int endLine, int endChar)
         : PrimitiveLeaf(value, startLine, startChar, endLine, endChar)
     {
-        public override string TypeName => PrimitiveTypeNames.Int64;
+        public override string TypeName => LanguageNames.Primitives.Int64;
     }
     public class BoolLeaf(string value, int startLine, int startChar, int endLine, int endChar)
         : PrimitiveLeaf(value, startLine, startChar, endLine, endChar)
     {
-        public override string TypeName => PrimitiveTypeNames.Bool;
+        public override string TypeName => LanguageNames.Primitives.Bool;
     }
 
 

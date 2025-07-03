@@ -1,9 +1,11 @@
+using CompilerLib.Parser.Nodes.Types;
+
 namespace CompilerLib.Parser.Nodes
 {
     public class VoidLeaf(string value, int startLine, int startChar, int endLine, int endChar)
         : KeywordLeaf(value, startLine, startChar, endLine, endChar);
     public class ImplicitVoidLeaf(int startLine, int startChar)
-        : VoidLeaf("void", startLine, startChar, startLine, startChar)
+        : VoidLeaf(LanguageNames.Keywords.Void, startLine, startChar, startLine, startChar)
     {
         public override string GetPrintable(int indent)
         {
