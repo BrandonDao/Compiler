@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using CompilerLib.Parser.Nodes;
+using CompilerLib.Parser.Nodes.Functions;
 
 namespace CompilerLib
 {
@@ -17,11 +18,13 @@ namespace CompilerLib
             public bool IsLocal { get; } = isLocal;
             public ScopeInfo? Parent { get; } = parent;
             public Dictionary<string, SymbolInfo> SymbolInfoByName { get; set; } = [];
-            public Dictionary<string, FunctionInfo> FunctionInfoByName { get; set; } = [];
+            public HashSet<string> FunctionNames { get; set; } = [];
+            public Dictionary<string, FunctionInfo> FunctionInfoBySignature { get; set; } = [];
         }
-        public class FunctionInfo(SymbolInfo symbolInfo, List<SymbolInfo> parameterInfos, ScopeInfo childScopeInfo)
+        public class FunctionInfo(string name, SymbolInfo signatureInfo, List<SymbolInfo> parameterInfos, ScopeInfo childScopeInfo)
         {
-            public SymbolInfo SymbolInfo { get; } = symbolInfo;
+            public string Name { get; } = name;
+            public SymbolInfo SignatureInfo { get; } = signatureInfo;
             public ScopeInfo ChildScopeInfo { get; } = childScopeInfo;
             public List<SymbolInfo> ParameterInfos { get; } = parameterInfos;
         }
@@ -49,31 +52,32 @@ namespace CompilerLib
             return scopeInfo;
         }
 
-        public FunctionInfo AddFunction(uint childScopeID, uint parentScopeID, string name, string returnType, List<SyntaxNode> parameters)
+        public static string GetFunctionSignature(FunctionDefinitionNode funcDefNode)
+            => $"{funcDefNode.Name}({string.Join(", ", funcDefNode.ParameterListNode.Parameters.Select(nameTypeNode => nameTypeNode.Type))})";
+        public static string GetFunctionSignature(string name, IEnumerable<string> argumentTypes)
+            => $"{name}({string.Join(", ", argumentTypes)})";
+
+        public FunctionInfo AddFunction(uint childScopeID, uint parentScopeID, FunctionDefinitionNode funcDefNode)
         {
             if (!scopeInfoByName.TryGetValue(parentScopeID, out var parentScopeInfo))
                 throw new ArgumentException($"Scope with ID {parentScopeID} does not exist.");
 
-            if (parentScopeInfo.FunctionInfoByName.ContainsKey(name))
-                throw new ArgumentException($"Function with ID {name} already exists!");
-
             if (scopeInfoByName.ContainsKey(childScopeID))
                 throw new ArgumentException($"Scope with ID already exists!");
 
-            ScopeInfo childScopeInfo = AddScope(childScopeID, name, isLocal: true, parentScopeID);
-            SymbolInfo funcSymbolInfo = new(parentScopeInfo, SymbolPosition: -1, name, returnType);
+            string funcSignature = GetFunctionSignature(funcDefNode);
+            ScopeInfo childScopeInfo = AddScope(childScopeID, funcDefNode.Name, isLocal: true, parentScopeID);
+            SymbolInfo funcSymbolInfo = new(parentScopeInfo, SymbolPosition: -1, funcSignature, funcDefNode.ReturnTypeName);
 
-            List<SymbolInfo> parameterInfos = new(capacity: parameters.Count);
-            foreach (var potentialParam in parameters)
+            List<SymbolInfo> parameterInfos = new(capacity: funcDefNode.ParameterListNode.Parameters.Count);
+            foreach (var param in funcDefNode.ParameterListNode.Parameters)
             {
-                if (potentialParam is not VariableNameTypeNode param)
-                    throw new InvalidOperationException("AST Conversion failed! Expected VariableNameTypeNode for function parameter, not " + potentialParam.GetType().Name);
-
                 parameterInfos.Add(AddSymbol(childScopeID, symbolPosition: -1, param.Name, param.Type));
             }
 
-            FunctionInfo functionInfo = new(funcSymbolInfo, parameterInfos, childScopeInfo);
-            parentScopeInfo.FunctionInfoByName.Add(name, functionInfo);
+            FunctionInfo functionInfo = new(funcDefNode.Name, funcSymbolInfo, parameterInfos, childScopeInfo);
+            parentScopeInfo.FunctionNames.Add(funcDefNode.Name);
+            parentScopeInfo.FunctionInfoBySignature.Add(funcSignature, functionInfo);
             return functionInfo;
         }
 
@@ -90,16 +94,30 @@ namespace CompilerLib
             return symbolInfo;
         }
 
-        public bool ContainsFunction(uint scopeID, string name)
-            => TryGetFunctionInfo(scopeID, name, out _);
-        public bool TryGetFunctionInfo(uint scopeID, string name, [NotNullWhen(true)] out FunctionInfo? info)
+
+        public bool ContainsFunctionName(uint scopeID, string name)
         {
-            info = null;
-            if (!scopeInfoByName.TryGetValue(scopeID, out var scopeInfo)) return false;
+            if (!scopeInfoByName.TryGetValue(scopeID, out var scopeInfo)) throw new ArgumentException($"Scope with ID {scopeID} does not exist.");
 
             foreach (var scope in GetScopeHierarchy(scopeInfo))
             {
-                if (scope.FunctionInfoByName.TryGetValue(name, out info)) return true;
+                if (scope.FunctionNames.Contains(name))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+        public bool ContainsFunction(uint scopeID, string nameParamSignature)
+            => TryGetFunctionInfo(scopeID, nameParamSignature, out _);
+        public bool TryGetFunctionInfo(uint scopeID, string nameParamSignature, [NotNullWhen(true)] out FunctionInfo? info)
+        {
+            if (!scopeInfoByName.TryGetValue(scopeID, out var scopeInfo)) throw new ArgumentException($"Scope with ID {scopeID} does not exist.");
+
+            info = null;
+            foreach (var scope in GetScopeHierarchy(scopeInfo))
+            {
+                if (scope.FunctionInfoBySignature.TryGetValue(nameParamSignature, out info)) return true;
             }
             return false;
         }
@@ -108,9 +126,9 @@ namespace CompilerLib
             => TryGetSymbolInfo(scopeID, name, out _);
         public bool TryGetSymbolInfo(uint scopeID, string name, [NotNullWhen(true)] out SymbolInfo? info)
         {
-            info = null;
-            if (!scopeInfoByName.TryGetValue(scopeID, out var scopeInfo)) return false;
+            if (!scopeInfoByName.TryGetValue(scopeID, out var scopeInfo)) throw new ArgumentException($"Scope with ID {scopeID} does not exist.");
 
+            info = null;
             foreach (var scope in GetScopeHierarchy(scopeInfo))
             {
                 if (scope.SymbolInfoByName.TryGetValue(name, out info)) return true;
@@ -138,9 +156,9 @@ namespace CompilerLib
                 {
                     result.AppendLine($"\tSymbol [{symbol.EnclosingScope.ID}.{symbol.SymbolPosition}] {symbol.Name}:{symbol.Type}");
                 }
-                foreach (var function in scope.FunctionInfoByName.Values)
+                foreach (var function in scope.FunctionInfoBySignature.Values)
                 {
-                    result.AppendLine($"\tFunction [{function.SymbolInfo.EnclosingScope.ID}.{function.SymbolInfo.SymbolPosition}] {function.SymbolInfo.Name}:{function.SymbolInfo.Type}");
+                    result.AppendLine($"\tFunction [{function.SignatureInfo.EnclosingScope.ID}.{function.SignatureInfo.SymbolPosition}] {function.SignatureInfo.Name}:{function.SignatureInfo.Type}");
                     result.AppendLine($"\t\tChild Scope: [{function.ChildScopeInfo.ID}] {function.ChildScopeInfo.Name}");
                     foreach (var param in function.ParameterInfos)
                     {

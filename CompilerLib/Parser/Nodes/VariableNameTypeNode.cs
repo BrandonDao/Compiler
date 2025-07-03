@@ -25,7 +25,7 @@ namespace CompilerLib.Parser.Nodes
             UpdateRange();
         }
 
-        public override SyntaxNode ToAST()
+        public override VariableNameTypeNode ToAST()
         {
             Children.RemoveAt(1); // Remove the colon
             for (int i = 0; i < Children.Count; i++)

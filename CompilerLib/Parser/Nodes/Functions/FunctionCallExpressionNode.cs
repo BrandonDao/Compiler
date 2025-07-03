@@ -1,4 +1,5 @@
 using CompilerLib.Parser.Nodes.Types;
+using static CompilerLib.SymbolTable;
 
 namespace CompilerLib.Parser.Nodes.Functions
 {
@@ -6,6 +7,7 @@ namespace CompilerLib.Parser.Nodes.Functions
     {
         public IdentifierLeaf Identifier { get; }
         public ArgumentListNode ArgumentList { get; }
+        public FunctionInfo? FunctionInfo { get; set; }
 
         public FunctionCallExpressionNode(IdentifierLeaf id, ArgumentListNode args)
             : base([id, args])

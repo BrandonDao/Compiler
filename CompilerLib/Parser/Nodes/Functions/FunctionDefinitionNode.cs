@@ -11,7 +11,7 @@ namespace CompilerLib.Parser.Nodes.Functions
     {
         public FunctionInfo? FunctionInfo { get; set; }
         public string Name { get; }
-        public ParameterListNode ParameterList { get; }
+        public ParameterListNode ParameterListNode { get; }
         public BlockNode Block => FunctionBlockNode;
         public string ReturnTypeName { get; }
 
@@ -21,7 +21,7 @@ namespace CompilerLib.Parser.Nodes.Functions
             : base([func, id, parameterList, arrow, returnTypeNode, body])
         {
             Name = id.Value;
-            ParameterList = parameterList;
+            ParameterListNode = parameterList;
             FunctionBlockNode = body;
             FunctionBlockNode.IsEntryPoint = Name == "Main";
             ReturnTypeName = returnTypeName;

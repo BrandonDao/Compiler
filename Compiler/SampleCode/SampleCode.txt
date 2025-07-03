@@ -6,12 +6,15 @@ namespace Program.ExtendedName
         let two: i32 = 2 + one * (one / one - one);
 
         add(1, two);;
+        add(1);
     }
 
     func add(a:i32, b:i32)
     {
         let result: i32 = a + b;
-        debugPrint(result);
-        debugPrint(true);
+    }
+    func add(a:i32)
+    {
+        let result: i32 = a + 1;
     }
 }

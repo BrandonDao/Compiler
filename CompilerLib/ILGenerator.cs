@@ -162,11 +162,11 @@ namespace CompilerLib
             }
             else if (operand is FunctionCallExpressionNode funcCallExpr)
             {
-                if (!symbolTable.TryGetFunctionInfo(scopeID, funcCallExpr.Identifier.Value, out FunctionInfo? funcInfo))
-                    throw new InvalidOperationException($"Function '{funcCallExpr.Identifier}' not found in symbol table!");
+                if (funcCallExpr.FunctionInfo == null)
+                    throw new NotImplementedException($"Semantic Analysis failed! Function call expression '{funcCallExpr.Identifier.Value}' does not have FunctionInfo set!");
 
                 List<string> parameterTypes = [];
-                foreach (var param in funcInfo.ParameterInfos)
+                foreach (var param in funcCallExpr.FunctionInfo.ParameterInfos)
                 {
                     if (!PrimitiveNameMap.TryGetValue(param.Type, out string? typeName))
                     {
@@ -178,7 +178,7 @@ namespace CompilerLib
                 {
                     ResolveOperand(ilGen, symbolTable, scopeID, statementInfos, indentLevel, localIdToIndex, argument);
                 }
-                statementInfos.Add((ilGen.Emit(OpCode.call, funcInfo.SymbolInfo.Name, funcInfo.SymbolInfo.Type, parameterTypes), indentLevel));
+                statementInfos.Add((ilGen.Emit(OpCode.call, funcCallExpr.FunctionInfo.Name, funcCallExpr.FunctionInfo.SignatureInfo.Type, parameterTypes), indentLevel));
             }
             else throw new NotImplementedException($"Unsupported operand type: {operand.GetType().Name}");
         }
