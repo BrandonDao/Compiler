@@ -94,7 +94,8 @@ namespace CompilerLib.Parser.Nodes.Operators
     {
         public override void GenerateCode(ILGenerator ilGen, SymbolTable symbolTable, uint scopeID, List<(string, int)> statementInfos, int indentLevel, Dictionary<string, int> localIdToIndex)
         {
-            throw new NotImplementedException();
+            ILGenerator.ResolveOperand(ilGen, symbolTable, scopeID, statementInfos, indentLevel, localIdToIndex, Operand);
+            statementInfos.Add((ilGen.Emit(ILGenerator.OpCode.not), indentLevel));
         }
 
         public override SyntaxNode ToAST()
@@ -112,7 +113,9 @@ namespace CompilerLib.Parser.Nodes.Operators
     {
         public override void GenerateCode(ILGenerator ilGen, SymbolTable symbolTable, uint scopeID, List<(string, int)> statementInfos, int indentLevel, Dictionary<string, int> localIdToIndex)
         {
-            throw new NotImplementedException();
+            ILGenerator.ResolveOperand(ilGen, symbolTable, scopeID, statementInfos, indentLevel, localIdToIndex, LeftOperand);
+            ILGenerator.ResolveOperand(ilGen, symbolTable, scopeID, statementInfos, indentLevel, localIdToIndex, RightOperand);
+            statementInfos.Add((ilGen.Emit(ILGenerator.OpCode.or), indentLevel));
         }
     }
 
@@ -120,7 +123,9 @@ namespace CompilerLib.Parser.Nodes.Operators
     {
         public override void GenerateCode(ILGenerator ilGen, SymbolTable symbolTable, uint scopeID, List<(string, int)> statementInfos, int indentLevel, Dictionary<string, int> localIdToIndex)
         {
-            throw new NotImplementedException();
+            ILGenerator.ResolveOperand(ilGen, symbolTable, scopeID, statementInfos, indentLevel, localIdToIndex, LeftOperand);
+            ILGenerator.ResolveOperand(ilGen, symbolTable, scopeID, statementInfos, indentLevel, localIdToIndex, RightOperand);
+            statementInfos.Add((ilGen.Emit(ILGenerator.OpCode.and), indentLevel));
         }
     }
 
@@ -128,7 +133,9 @@ namespace CompilerLib.Parser.Nodes.Operators
     {
         public override void GenerateCode(ILGenerator ilGen, SymbolTable symbolTable, uint scopeID, List<(string, int)> statementInfos, int indentLevel, Dictionary<string, int> localIdToIndex)
         {
-            throw new NotImplementedException();
+            ILGenerator.ResolveOperand(ilGen, symbolTable, scopeID, statementInfos, indentLevel, localIdToIndex, LeftOperand);
+            ILGenerator.ResolveOperand(ilGen, symbolTable, scopeID, statementInfos, indentLevel, localIdToIndex, RightOperand);
+            statementInfos.Add((ilGen.Emit(ILGenerator.OpCode.ceq), indentLevel));
         }
     }
 }

@@ -27,13 +27,17 @@ namespace CompilerLib
             call = 0x28,
             ret = 0x2A,
 
-            #region Math
+            #region MathAndLogic
             add = 0x58,
             sub = 0x59,
             mul = 0x5A,
             div = 0x5B,
             rem = 0x5C,
-            #endregion Math
+            and = 0x5F,
+            or = 0x60,
+            not = 0x66,
+            ceq = 0xFE01,
+            #endregion MathAndLogic
 
             ldarg = 0xFE09,
             // ldarg_0 = 0x02,
@@ -75,18 +79,22 @@ namespace CompilerLib
             currentStack++;
             MaxStack = Math.Max(MaxStack, currentStack);
         }
-        private void PopStack() => currentStack--;
+        private void PopStack(int count = 1) => currentStack -= count;
 
         public string Emit(OpCode opCode)
         {
             switch (opCode)
             {
                 case OpCode.nop: return "nop";
-                case OpCode.add: PopStack(); return "add";
-                case OpCode.sub: PopStack(); return "sub";
-                case OpCode.mul: PopStack(); return "mul";
-                case OpCode.div: PopStack(); return "div";
-                case OpCode.rem: PopStack(); return "rem";
+                case OpCode.add: PopStack(2); return "add";
+                case OpCode.sub: PopStack(2); return "sub";
+                case OpCode.mul: PopStack(2); return "mul";
+                case OpCode.div: PopStack(2); return "div";
+                case OpCode.rem: PopStack(2); return "rem";
+                case OpCode.and: PopStack(2); return "and";
+                case OpCode.or: PopStack(2); return "or";
+                case OpCode.not: PopStack(); return "not";
+                case OpCode.ceq: PopStack(2); return "ceq";
                 default: throw new NotImplementedException();
             }
         }
@@ -145,8 +153,8 @@ namespace CompilerLib
                         3 => "ldarg.3",
                         _ => $"ldarg {value}",
                     };
-                default:
-                    throw new NotImplementedException();
+                case OpCode.ldc_i4: return Emit(OpCode.ldc_i4, value.ToString());
+                default: throw new NotImplementedException();
             }
         }
         public string Emit(OpCode opCode, string funcName, string returnType, IEnumerable<string> parameters)
@@ -173,6 +181,10 @@ namespace CompilerLib
                 if (literal is IntLiteralLeaf intLiteral)
                 {
                     statementInfos.Add((ilGen.Emit(OpCode.ldc_i4, intLiteral.Value), indentLevel));
+                }
+                else if(literal is BoolLiteralLeaf boolLiteral)
+                {
+                    statementInfos.Add((ilGen.Emit(OpCode.ldc_i4, boolLiteral.Value == LanguageNames.Literals.True ? 1 : 0), indentLevel));
                 }
                 else throw new NotImplementedException();
             }

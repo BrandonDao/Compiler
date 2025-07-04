@@ -1,0 +1,27 @@
+namespace Program.ExtendedName
+{
+    func Main()
+    {
+        let two: i32 = 2;
+        debugPrint(two);
+        let num: i32 = (two + 2 - 1 - 1) / 1234567 * 1 + 1;
+        debugPrint(num);
+
+        let _true: bool = true;
+        debugPrint(_true);
+        let _false: bool = !_true & !false | (two == num);
+
+        Function1(two, num);
+        Function1(_false);
+    }
+
+    fn Function1(a:i32, b:i32) -> void
+    {
+        debugPrint(a + b);
+    }
+    fn Function1(x:bool) -> void
+    {
+        debugPrint(x);
+        debugPrint(!false);
+    }
+}

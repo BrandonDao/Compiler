@@ -190,8 +190,7 @@ namespace Compiler.Parser
                             var notValueNode = ParseValueTerm(ref position)
                                 ?? throw new ArgumentException("Could not parse the expression after the '!' token!");
 
-                            var notOpNode = new NotOperationNode([notToken, null]);
-                            notOpNode.Children[1] = notValueNode;
+                            var notOpNode = new NotOperationNode([notToken, notValueNode]);
                             notOpNode.UpdateRange();
                             return notOpNode;
                         }

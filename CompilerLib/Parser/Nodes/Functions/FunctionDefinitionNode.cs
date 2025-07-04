@@ -1,3 +1,4 @@
+using System.Reflection;
 using System.Text;
 using CompilerLib.Parser.Nodes.Scopes;
 using CompilerLib.Parser.Nodes.Types;
@@ -68,22 +69,25 @@ namespace CompilerLib.Parser.Nodes.Functions
                 codeBuilder.AppendLine($" '{Name}' (");
 
                 indentLevel++;
-                for (int i = 0; true; i++)
+                if (FunctionInfo.ParameterInfos.Count > 0)
                 {
-                    SymbolInfo param = FunctionInfo.ParameterInfos[i];
-                    if (ILGenerator.PrimitiveNameMap.TryGetValue(param.Type, out var paramPrimitiveTypeName))
+                    for (int i = 0; true; i++)
                     {
-                        codeBuilder.AppendIndented($"{paramPrimitiveTypeName} {param.Name}", indentLevel);
+                        SymbolInfo param = FunctionInfo.ParameterInfos[i];
+                        if (ILGenerator.PrimitiveNameMap.TryGetValue(param.Type, out var paramPrimitiveTypeName))
+                        {
+                            codeBuilder.AppendIndented($"{paramPrimitiveTypeName} {param.Name}", indentLevel);
+                        }
+                        else
+                        {
+                            codeBuilder.AppendIndented($"{param.Type} {param.Name}", indentLevel);
+                        }
+                        if (i + 1 < FunctionInfo.ParameterInfos.Count)
+                        {
+                            codeBuilder.AppendLine(", ");
+                        }
+                        else break;
                     }
-                    else
-                    {
-                        codeBuilder.AppendIndented($"{param.Type} {param.Name}", indentLevel);
-                    }
-                    if (i + 1 < FunctionInfo.ParameterInfos.Count)
-                    {
-                        codeBuilder.AppendLine(", ");
-                    }
-                    else break;
                 }
                 codeBuilder.AppendLine();
                 indentLevel--;

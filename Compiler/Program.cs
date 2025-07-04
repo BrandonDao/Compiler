@@ -11,7 +11,7 @@ namespace Compiler
         {
             RegexLexer lexer = new();
 
-            const string relativeCodeFilePath = @"SampleCode\SampleCode.txt";
+            const string relativeCodeFilePath = @"SampleCode\PassTest.txt";
             const string relativeILFilePath = @"GeneratedIL.txt";
 
             var tokens = lexer.TokenizeFile(
