@@ -96,6 +96,8 @@ namespace CompilerLib.Parser.Nodes.Operators
         {
             ILGenerator.ResolveOperand(ilGen, symbolTable, scopeID, statementInfos, indentLevel, localIdToIndex, Operand);
             statementInfos.Add((ilGen.Emit(ILGenerator.OpCode.not), indentLevel));
+            statementInfos.Add((ilGen.Emit(ILGenerator.OpCode.ldc_i4, 1), indentLevel));
+            statementInfos.Add((ilGen.Emit(ILGenerator.OpCode.and), indentLevel));
         }
 
         public override SyntaxNode ToAST()
