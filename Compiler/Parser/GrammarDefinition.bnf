@@ -32,7 +32,7 @@ HighLevelBlockItem  : NamespaceDef | FunctionDef | VarDefStatement;
 
 StatementBlock      : _OpenBrace StatementBlockItem StatementBlockRest _CloseBrace;
 StatementBlockRest  : StatementBlock | EMPTY;
-StatementBlockItem  : VarDefStatement | AssignmentOrFuncCallStatement | WhileStatement | StatementBlock | EmptyStatement;
+StatementBlockItem  : VarDefStatement | AssignmentOrFuncCallStatement | WhileStatement | ReturnStatement | StatementBlock | EmptyStatement;
 EmptyStatement      : _Semicolon;
 
 # Variables
@@ -75,6 +75,8 @@ Argument            : ValueExpr;
 # Statements 
 AssignmentOrFuncCallStatement       : _Id AssignmentOrFuncCallStatementRest _Semicolon;
 AssignmentOrFuncCallStatementRest   : ArgumentList | _OpAssign ValueExpr;
+ReturnStatement                     : _Return ReturnValue _Semicolon;
+ReturnValue                         : ValueExpr | EMPTY;
 
 # Control Statements
 WhileStatement  : _While ValueExpr StatementBlock;

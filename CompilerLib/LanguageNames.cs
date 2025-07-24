@@ -13,6 +13,7 @@ namespace CompilerLib.Parser.Nodes.Types
         public static class Keywords
         {
             public const string Void = "void";
+            public const string Return = "return";
             public const string Let = "let";
             public const string While = "while";
             public const string Func = "func";

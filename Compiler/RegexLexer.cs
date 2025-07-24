@@ -20,6 +20,7 @@ namespace Compiler
             new(LexPriority.PrimitiveOrKeyword, @$"\b({LanguageNames.Primitives.Int32}|i32)\b", (v, sl, sc, el, ec) => new Int32Leaf(v, sl, sc, el, ec)),
             new(LexPriority.PrimitiveOrKeyword, @$"\b({LanguageNames.Primitives.Int64}|i64)\b", (v, sl, sc, el, ec) => new Int64Leaf(v, sl, sc, el, ec)),
             new(LexPriority.PrimitiveOrKeyword, @$"\b{LanguageNames.Primitives.Bool}\b", (v, sl, sc, el, ec) => new BoolLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.PrimitiveOrKeyword, @$"\b{LanguageNames.Keywords.Return}\b", (v, sl, sc, el, ec) => new ReturnKeywordLeaf(v, sl, sc, el, ec)),
             new(LexPriority.PrimitiveOrKeyword, @$"\b{LanguageNames.Keywords.Void}\b", (v, sl, sc, el, ec) => new VoidLeaf(v, sl, sc, el, ec)),
             new(LexPriority.PrimitiveOrKeyword, @$"\b{LanguageNames.Keywords.Let}\b", (v, sl, sc, el, ec) => new LetKeywordLeaf(v, sl, sc, el, ec)),
             new(LexPriority.PrimitiveOrKeyword, @$"\b{LanguageNames.Keywords.While}\b", (v, sl, sc, el, ec) => new WhileKeywordLeaf(v, sl, sc, el, ec)),

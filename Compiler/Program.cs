@@ -61,7 +61,7 @@ namespace Compiler
             astRoot.GenerateILCode(iLGenerator, analyzer.SymbolTable, codeBuilder, indentLevel: 0);
 
             string generatedIL = codeBuilder.ToString();
-            Console.WriteLine(generatedIL);
+            //Console.WriteLine(generatedIL);
 
             File.WriteAllText(
                 Path.Combine("..", "..", "..", relativeILFilePath),

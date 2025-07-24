@@ -467,6 +467,24 @@ namespace Compiler.Parser
                     }
                     else throw new ArgumentException($"Unexpected token after identifier in statement: {tokens[position]}!");
                 }
+                else if (tokens[position] is ReturnKeywordLeaf returnKeyword)
+                {
+                    position++;
+                    if (tokens[position] is SemicolonLeaf earlySemicolon)
+                    {
+                        position++;
+                        statements.Add(new ReturnStatementNode(returnKeyword, earlySemicolon));
+                        continue;
+                    }
+
+                    SyntaxNode returnValue = ParseValueExpression(tokens, ref position);
+
+                    if (tokens[position] is not SemicolonLeaf semicolonLeaf)
+                        throw new ArgumentException($"Expected ';' token at the end of return statement, not {tokens[position]}!");
+
+                    position++;
+                    statements.Add(new ReturnStatementNode(returnKeyword, returnValue, semicolonLeaf));
+                }
                 else if (tokens[position] is OpenBraceLeaf)
                 {
                     statements.Add(ParseLocalBlock(tokens, ref position));

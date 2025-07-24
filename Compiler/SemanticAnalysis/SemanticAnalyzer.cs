@@ -24,7 +24,7 @@ namespace Compiler.SemanticAnalysis
             [
                 RegisterPrimitives,
                 TryBuildSymbolTable,
-                TryValidateScopes,
+                TryValidateScopesAndTypes,
             ];
         }
 
@@ -42,6 +42,9 @@ namespace Compiler.SemanticAnalysis
             completionMessage = $"Semantic analysis completed successfully with the following messages:\n{messageSB}";
             return true;
         }
+
+        private static void LogMessage(StringBuilder builder, SyntaxNode node, string message)
+            => builder.AppendLine($"\t[{node.StartLine}.{node.StartChar}-{node.EndLine}.{node.EndChar}] {message}");
 
         private bool RegisterPrimitives(SyntaxNode _, StringBuilder messageSB)
         {
@@ -139,13 +142,14 @@ namespace Compiler.SemanticAnalysis
                 }
             }
         }
-        private bool TryValidateScopes(SyntaxNode rootNode, StringBuilder messageSB)
+        private bool TryValidateScopesAndTypes(SyntaxNode rootNode, StringBuilder messageSB)
         {
-            bool hasFailed = false;
-            messageSB.AppendLine("Scope validation failed:");
+            messageSB.AppendLine("Scope completed with the following messages:");
 
-            ValidateScopesAndTypes(rootNode, 0, 0, false);
-            if (hasFailed)
+            bool failFlag = false;
+            ValidateNonLocal(SymbolTable, ref failFlag, messageSB, rootNode, currentScopeID: 0);
+
+            if (failFlag)
             {
                 return false;
             }
@@ -153,328 +157,345 @@ namespace Compiler.SemanticAnalysis
             messageSB.AppendLine("\tScope validation completed successfully.");
             return true;
 
-            void ValidateScopesAndTypes(IHasChildren node, uint currentScopeID, int statementPosition, bool isLocal)
+            static void ValidateNonLocal(SymbolTable symbolTable, ref bool failFlag, StringBuilder messageSB, IHasChildren node, uint currentScopeID)
             {
-                for (int i = 0; i < node.Children.Count; i++)
+                foreach (SyntaxNode? child in node.Children)
+                {
+                    switch (child)
+                    {
+                        case VariableDefinitionNode varDefNode:
+                            IdentifierLeaf varID = varDefNode.NameTypeNode.Identifier;
+
+                            TryValidateVariableDefinition(symbolTable, ref failFlag, messageSB, varDefNode, currentScopeID);
+                            break;
+
+                        case IContainsScopeNode scopeContainer:
+                            if (child is FunctionDefinitionNode funcDefNode)
+                            {
+                                if (funcDefNode.FunctionInfo == null) throw new InvalidOperationException("Function definition node does not have function info set!");
+
+                                ValidateLocal(symbolTable, ref failFlag, messageSB, funcDefNode.FunctionBlockNode, funcDefNode.FunctionInfo, statementPosition: 0);
+                            }
+                            else if (child is NamespaceDefinitionNode namespaceDefNode)
+                            {
+                                ValidateNonLocal(symbolTable, ref failFlag, messageSB, namespaceDefNode.Block, currentScopeID);
+                            }
+                            else throw new NotImplementedException("Scope container not implemented: " + child.GetType().Name);
+                            break;
+
+                        default: throw new NotImplementedException("Non-Local node type not implemented: " + child.GetType().Name);
+                    }
+                }
+            }
+
+            static void ValidateLocal(SymbolTable symbolTable, ref bool failFlag, StringBuilder messageSB, IHasChildren node, FunctionInfo funcInfo, int statementPosition)
+            {
+                foreach (SyntaxNode? child in node.Children)
                 {
                     statementPosition++;
-                    SyntaxNode? child = node.Children[i];
 
-                    if (child is VariableDefinitionNode varDefNode)
+                    switch (child)
                     {
-                        IdentifierLeaf varID = varDefNode.NameTypeNode.Identifier;
+                        case VariableDefinitionNode varDefNode:
+                            IdentifierLeaf varID = varDefNode.NameTypeNode.Identifier;
+                            TryValidateVariableDefinition(symbolTable, ref failFlag, messageSB, varDefNode, funcInfo.ChildScopeInfo.ID);
+                            break;
 
-                        if (!SymbolTable.TryGetSymbolInfo(currentScopeID, name: varID.Value, out SymbolInfo? nameInfo))
-                            throw new InvalidOperationException($"Symbol table failed to build variable definitions correctly!"
-                                + "Could not find symbol: ({varID})");
+                        case AssignmentStatementNode assignmentNode:
+                            TryValidateIdentifierScope(symbolTable, ref failFlag, messageSB, assignmentNode.Identifier, funcInfo.ChildScopeInfo.ID, statementPosition);
+                            TryValidateIdentifierScope(symbolTable, ref failFlag, messageSB, assignmentNode.AssignedValue, funcInfo.ChildScopeInfo.ID, statementPosition);
 
-                        if (!SymbolTable.ContainsSymbol(currentScopeID, varDefNode.NameTypeNode.Type))
-                        {
-                            hasFailed = true;
-                            messageSB.AppendLine($"\t[{varDefNode.NameTypeNode.StartLine}.{varDefNode.NameTypeNode.StartChar}-{varDefNode.NameTypeNode.EndLine}.{varDefNode.NameTypeNode.EndChar}] "
-                                + $"The type '{varDefNode.NameTypeNode.Type}' is not defined in the current context!");
-                        }
-
-                        if (TryValidateVarDefScope(varDefNode.AssignedValue, currentScopeID, nameInfo)) // Will not validate type if scope check fails
-                        {
-                            ValidateVarDefType(varDefNode, currentScopeID, messageSB);
-                        }
-                    }
-                    else if (child is IContainsScopeNode scopeContainer)
-                    {
-                        if (scopeContainer is WhileStatementNode whileNode)
-                        {
-                            string conditionType = ResolveType(whileNode.Condition, currentScopeID, messageSB);
-
-                            if (conditionType != LanguageNames.Primitives.Bool)
+                            if (!symbolTable.TryGetSymbolInfo(funcInfo.ChildScopeInfo.ID, assignmentNode.Identifier.Value, out SymbolInfo? info))
                             {
-                                hasFailed = true;
-                                messageSB.AppendLine($"\t[{whileNode.StartLine}.{whileNode.StartChar}-{whileNode.EndLine}.{whileNode.EndChar}] "
-                                    + $"While loop condition must be of type 'bool', found '{conditionType}' instead!");
+                                throw new InvalidOperationException($"Symbol table failed to build variable definitions correctly! "
+                                    + $"Could not find symbol: ({assignmentNode.Identifier.Value})");
+                            }
+
+                            string assignedType = ResolveType(symbolTable, ref failFlag, messageSB, assignmentNode.AssignedValue, funcInfo.ChildScopeInfo.ID);
+
+                            if (info.Type != assignedType)
+                            {
+                                failFlag = true;
+                                LogMessage(messageSB, assignmentNode.AssignedValue, $"Cannot assign type of '{assignedType}' to variable {info.Name} of type '{info.Type}'");
+                            }
+                            break;
+
+                        case FunctionCallStatementNode funcCallNode:
+                            if (!symbolTable.ContainsFunctionName(funcInfo.ChildScopeInfo.ID, funcCallNode.FunctionCallExpression.Identifier.Value))
+                            {
+                                failFlag = true;
+                                LogMessage(
+                                    messageSB,
+                                    funcCallNode.FunctionCallExpression.Identifier,
+                                    $"The function '{funcCallNode.FunctionCallExpression.Identifier.Value}' does not exist in the current context!");
+                                continue;
+                            }
+                            ResolveType(symbolTable, ref failFlag, messageSB, funcCallNode.FunctionCallExpression, funcInfo.ChildScopeInfo.ID);
+
+                            break;
+
+                        case ReturnStatementNode returnNode:
+                            if (returnNode.ReturnValue == null) continue;
+
+                            string returnType = ResolveType(symbolTable, ref failFlag, messageSB, returnNode.ReturnValue, funcInfo.ChildScopeInfo.ID);
+
+                            if (funcInfo.SignatureInfo.Type != returnType)
+                            {
+                                failFlag = true;
+                                LogMessage(messageSB, returnNode, $"Return type '{returnType}' does not match function return type '{funcInfo.SignatureInfo.Type}'!");
+                            }
+                            break;
+
+                        case EmptyStatementNode: break;
+
+                        case IContainsScopeNode scopeContainer:
+                            if (scopeContainer is WhileStatementNode whileNode)
+                            {
+                                string conditionType = ResolveType(symbolTable, ref failFlag, messageSB, whileNode.Condition, funcInfo.ChildScopeInfo.ID);
+
+                                if (conditionType != LanguageNames.Primitives.Bool)
+                                {
+                                    failFlag = true;
+                                    LogMessage(messageSB, whileNode, $"While loop condition must be of type 'bool', found '{conditionType}' instead!");
+                                }
+                            }
+
+                            uint scopeID = scopeContainer.Block.ID;
+                            ValidateLocal(symbolTable, ref failFlag, messageSB, scopeContainer.Block, funcInfo, statementPosition);
+                            break;
+                    }
+                }
+            }
+
+            static bool TryValidateVariableDefinition(SymbolTable symbolTable, ref bool failFlag, StringBuilder messageSB, VariableDefinitionNode node, uint scopeID)
+            {
+                if (!symbolTable.ContainsSymbol(scopeID, node.NameTypeNode.Type))
+                {
+                    LogMessage(messageSB, node.NameTypeNode, $"The type '{node.NameTypeNode.Type}' is not defined in the current context!");
+                    failFlag = true;
+                }
+
+                if (!symbolTable.TryGetSymbolInfo(scopeID, name: node.NameTypeNode.Name, out SymbolInfo? varInfo))
+                {
+                    throw new InvalidOperationException($"Symbol table failed to build variable definitions correctly! "
+                        + $"Could not find symbol: ({node.NameTypeNode.Name})");
+                }
+
+                if (!TryValidateValueExprScope(symbolTable, ref failFlag, messageSB, node.AssignedValue, scopeID, varInfo))
+                {
+                    return false;
+                }
+
+                string rhsType = ResolveType(symbolTable, ref failFlag, messageSB, node.AssignedValue, varInfo.EnclosingScope.ID);
+
+                if (node.NameTypeNode.Type == rhsType) return true;
+
+                failFlag = true;
+                LogMessage(messageSB, node, $"Cannot assign type of '{rhsType}' to variable {node.NameTypeNode.Name} of type '{node.NameTypeNode.Type}'");
+                return false;
+
+                static bool TryValidateValueExprScope(SymbolTable symbolTable, ref bool failFlag, StringBuilder messageSB, IHasChildren node, uint currentScopeID, SymbolInfo definedVarInfo)
+                {
+                    switch (node)
+                    {
+                        case IdentifierLeaf id:
+                            {
+                                if (!symbolTable.TryGetSymbolInfo(currentScopeID, id.Value, out SymbolInfo? symInfo))
+                                {
+                                    failFlag = true;
+                                    LogMessage(messageSB, id, $"The identifier '{id.Value}' does not exist in the current context!");
+                                    return false;
+                                }
+
+                                if (symInfo.EnclosingScope.IsLocal)
+                                {
+                                    if (symInfo.SymbolPosition < definedVarInfo.SymbolPosition) return true;
+
+                                    failFlag = true;
+                                    LogMessage(messageSB, id, $"Cannot use identifier '{id.Value}' before is declared!");
+                                    return false;
+                                }
+                                else if (!definedVarInfo.EnclosingScope.IsLocal)
+                                {
+                                    failFlag = true;
+                                    LogMessage(messageSB, id, $"A field definition cannot reference another field '{id.Value}'!");
+                                    return false;
+                                }
+                                else return true;
+                            }
+
+                        case FunctionCallExpressionNode funcCallExpr:
+                            if (symbolTable.ContainsFunction(currentScopeID, funcCallExpr.Identifier.Value)) return true;
+
+                            string funcSignature = GenerateFunctionSignature(symbolTable, ref failFlag, messageSB, funcCallExpr, currentScopeID);
+
+                            if (!symbolTable.TryGetFunctionInfo(currentScopeID, funcSignature, out FunctionInfo? funcInfo))
+                            {
+                                failFlag = true;
+                                LogMessage(messageSB, funcCallExpr.Identifier, $"No function overload matching signature '{funcSignature}' is defined in the current context!");
+                                return false;
+                            }
+                            return true;
+
+                        default:
+                            {
+                                bool hasThisFailed = false;
+
+                                foreach (SyntaxNode? child in node.Children)
+                                {
+                                    if (!TryValidateValueExprScope(symbolTable, ref failFlag, messageSB, child, currentScopeID, definedVarInfo))
+                                    {
+                                        hasThisFailed = true;
+                                    }
+                                }
+
+                                return !hasThisFailed;
+                            }
+                    }
+                }
+            }
+
+            static bool TryValidateIdentifierScope(SymbolTable symbolTable, ref bool failFlag, StringBuilder messageSB, SyntaxNode node, uint currentScopeID, int statementPosition)
+            {
+                switch (node)
+                {
+                    case IdentifierLeaf id:
+                        if (!symbolTable.TryGetSymbolInfo(currentScopeID, id.Value, out SymbolInfo? symInfo))
+                        {
+                            failFlag = true;
+                            LogMessage(messageSB, id, $"The identifier '{id.Value}' does not exist in the current context!");
+                            return false;
+                        }
+                        if (symInfo.EnclosingScope.IsLocal && symInfo.SymbolPosition >= statementPosition)
+                        {
+                            failFlag = true;
+                            LogMessage(messageSB, id, $"Cannot use identifier '{id.Value}' before is declared!");
+                            return false;
+                        }
+                        return true;
+
+                    default:
+                        bool haveIFailed = false;
+                        foreach (SyntaxNode? child in node.Children)
+                        {
+                            if (!TryValidateIdentifierScope(symbolTable, ref failFlag, messageSB, child, currentScopeID, statementPosition))
+                            {
+                                haveIFailed = true;
                             }
                         }
-
-                        if (child is FunctionDefinitionNode funcDefNode)
-                        {
-                            isLocal = true;
-                            statementPosition = 0;
-                        }
-
-                        uint scopeID = scopeContainer.Block.ID;
-                        ValidateScopesAndTypes(scopeContainer.Block, scopeID, statementPosition, isLocal);
-                    }
-                    else if (child is AssignmentStatementNode assignment)
-                    {
-                        if (TryValidateAssignmentOrFuncCallScope(assignment, currentScopeID, statementPosition))
-                        {
-                            ValidateAssignment(assignment, currentScopeID, messageSB);
-                        }
-                    }
-                    else if (child is FunctionCallStatementNode funcCall)
-                    {
-                        if (TryValidateAssignmentOrFuncCallScope(funcCall, currentScopeID, statementPosition))
-                        {
-                            ResolveType(funcCall.FunctionCallExpression, currentScopeID, messageSB);
-                        }
-                    }
-                    else if (child is EmptyStatementNode)
-                    {
-                        // Do nothing
-                    }
-                    else throw new NotImplementedException();
-                }
-            }
-            bool TryValidateVarDefScope(IHasChildren node, uint currentScopeID, SymbolInfo definedVarInfo)
-            {
-                bool hasThisFailed = false;
-                if (node is IdentifierLeaf id)
-                {
-                    if (!SymbolTable.TryGetSymbolInfo(currentScopeID, id.Value, out SymbolInfo? symInfo))
-                    {
-                        if (SymbolTable.TryGetFunctionInfo(currentScopeID, id.Value, out FunctionInfo? funcInfo))
-                        {
-                            hasThisFailed = true;
-                            hasFailed = true;
-                            messageSB.AppendLine($"\t[{id.StartLine}.{id.StartChar}-{id.EndLine}.{id.EndChar}] Cannot use the function '{id.Value}' like a variable! Did you mean to call it?");
-                        }
-                        else
-                        {
-                            hasThisFailed = true;
-                            hasFailed = true;
-                            messageSB.AppendLine($"\t[{id.StartLine}.{id.StartChar}-{id.EndLine}.{id.EndChar}] The identifier '{id.Value}' does not exist in the current context!");
-                        }
-                    }
-                    else
-                    {
-                        if (symInfo.EnclosingScope.IsLocal)
-                        {
-                            if (symInfo.SymbolPosition >= definedVarInfo.SymbolPosition)
-                            {
-                                hasThisFailed = true;
-                                hasFailed = true;
-                                messageSB.AppendLine($"\t[{id.StartLine}.{id.StartChar}-{id.EndLine}.{id.EndChar}] Cannot use identifier '{id.Value}' before is declared!");
-                            }
-                        }
-                        else if (!definedVarInfo.EnclosingScope.IsLocal)
-                        {
-                            hasThisFailed = true;
-                            hasFailed = true;
-                            messageSB.AppendLine($"\t[{id.StartLine}.{id.StartChar}-{id.EndLine}.{id.EndChar}] A field definition cannot reference another field '{id.Value}'!");
-                        }
-                    }
-                }
-                else if (node is FunctionCallExpressionNode funcCallExpr)
-                {
-                    if (!SymbolTable.TryGetFunctionInfo(currentScopeID, funcCallExpr.Identifier.Value, out FunctionInfo? funcInfo))
-                    {
-                        hasThisFailed = true;
-                        hasFailed = true;
-                        messageSB.AppendLine($"\t[{funcCallExpr.StartLine}.{funcCallExpr.StartChar}-{funcCallExpr.EndLine}.{funcCallExpr.EndChar}] "
-                            + $"The function '{funcCallExpr.Identifier.Value}' does not exist in the current context!");
-                    }
-                }
-                else
-                {
-                    foreach (SyntaxNode? child in node.Children)
-                    {
-                        if (!TryValidateVarDefScope(child, currentScopeID, definedVarInfo))
-                        {
-                            hasThisFailed = true;
-                        }
-                    }
-                }
-                return !hasThisFailed;
-            }
-            bool TryValidateAssignmentOrFuncCallScope(IHasChildren node, uint currentScopeID, int statementPosition)
-            {
-                bool hasThisFailed = false;
-                if (node is IdentifierLeaf id)
-                {
-                    if (!SymbolTable.TryGetSymbolInfo(currentScopeID, id.Value, out SymbolInfo? symInfo))
-                    {
-                        hasThisFailed = true;
-                        hasFailed = true;
-                        messageSB.AppendLine($"\t[{id.StartLine}.{id.StartChar}-{id.EndLine}.{id.EndChar}] The identifier '{id.Value}' does not exist in the current context!");
-                    }
-                    else if (symInfo.EnclosingScope.IsLocal && symInfo.SymbolPosition >= statementPosition)
-                    {
-                        hasThisFailed = true;
-                        hasFailed = true;
-                        messageSB.AppendLine($"\t[{id.StartLine}.{id.StartChar}-{id.EndLine}.{id.EndChar}] Cannot use identifier '{id.Value}' before is declared!");
-                    }
-                }
-                else if (node is FunctionCallExpressionNode funcCallExpr)
-                {
-                    if (!SymbolTable.ContainsFunctionName(currentScopeID, funcCallExpr.Identifier.Value))
-                    {
-                        hasThisFailed = true;
-                        hasFailed = true;
-                        messageSB.AppendLine($"\t[{funcCallExpr.StartLine}.{funcCallExpr.StartChar}-{funcCallExpr.EndLine}.{funcCallExpr.EndChar}] "
-                            + $"The function name '{funcCallExpr.Identifier.Value}' does not exist in the current context!");
-                    }
-                }
-                else
-                {
-                    foreach (SyntaxNode? child in node.Children)
-                    {
-                        if (!TryValidateAssignmentOrFuncCallScope(child, currentScopeID, statementPosition))
-                        {
-                            hasThisFailed = true;
-                        }
-                    }
-                }
-                return !hasThisFailed;
-            }
-            void ValidateVarDefType(VariableDefinitionNode node, uint currentScopeID, StringBuilder messageSB)
-            {
-                string assignmentRHS = ResolveType(node.AssignedValue, currentScopeID, messageSB);
-
-                if (node.NameTypeNode.Type != assignmentRHS)
-                {
-                    messageSB.AppendLine($"\t[{node.StartLine}.{node.StartChar}-{node.EndLine}.{node.EndChar}] "
-                        + $"Cannot assign type of '{assignmentRHS}' to variable {node.NameTypeNode.Name} of type '{node.NameTypeNode.Type}'");
-                }
-            }
-            void ValidateAssignment(AssignmentStatementNode node, uint currentScopeID, StringBuilder messageSB)
-            {
-                if (!SymbolTable.TryGetSymbolInfo(currentScopeID, node.Identifier.Value, out SymbolInfo? info))
-                {
-                    hasFailed = true;
-                    messageSB.AppendLine($"\t[{node.StartLine}.{node.StartChar}-{node.EndLine}.{node.EndChar}] "
-                        + $"Cannot assign to undefined identifier '{node.Identifier.Value}'");
-                    return;
-                }
-
-                string assignedType = ResolveType(node.AssignedValue, currentScopeID, messageSB);
-
-                if (info.Type != assignedType)
-                {
-                    hasFailed = true;
-                    messageSB.AppendLine($"\t[{node.StartLine}.{node.StartChar}-{node.EndLine}.{node.EndChar}] "
-                        + $"Cannot assign type of '{assignedType}' to variable {info.Name} of type '{info.Type}'");
+                        return !haveIFailed;
                 }
             }
         }
 
-        string ResolveType(IHasChildren node, uint currentScopeID, StringBuilder messageSB)
+        private static string GenerateFunctionSignature(SymbolTable symbolTable, ref bool failFlag, StringBuilder messageSB, FunctionCallExpressionNode funcCallExpr, uint currentScopeID)
         {
-            if (node is ValueOperationNode)
+            string name = funcCallExpr.Identifier.Value;
+            var arguments = funcCallExpr.ArgumentList.Children;
+
+            List<string> argumentTypes = new(arguments.Count);
+            foreach (SyntaxNode arg in arguments)
             {
-                if (node is UnaryOperationNode)
-                {
-                    if (node is NotOperationNode notOp)
+                string argType = ResolveType(symbolTable, ref failFlag, messageSB, arg, currentScopeID);
+                argumentTypes.Add(argType);
+            }
+            return SymbolTable.GetFunctionSignature(name, argumentTypes);
+        }
+        private static string ResolveType(SymbolTable symbolTable, ref bool failFlag, StringBuilder messageSB, IHasChildren node, uint currentScopeID)
+        {
+            switch (node)
+            {
+                case ValueOperationNode:
                     {
-                        string type = ResolveType(notOp.Operand, currentScopeID, messageSB);
-
-                        if (type != LanguageNames.Primitives.Bool)
+                        switch (node)
                         {
-                            messageSB.AppendLine($"\t[{notOp.StartLine}.{notOp.StartChar}-{notOp.EndLine}.{notOp.EndChar}] "
-                                + $"Operator '!' cannot be applied to operand of type {type}");
+                            case UnaryOperationNode:
+                                if (node is NotOperationNode notOp)
+                                {
+                                    string type = ResolveType(symbolTable, ref failFlag, messageSB, notOp.Operand, currentScopeID);
+
+                                    if (type != LanguageNames.Primitives.Bool)
+                                    {
+                                        failFlag = true;
+                                        LogMessage(messageSB, notOp, $"Operator '!' cannot be applied to operand of type {type}");
+                                    }
+                                    return type;
+                                }
+                                throw new NotImplementedException("Unary operation not implemented: " + node.GetType().Name);
+
+
+                            case BinaryOperationNode binaryOp:
+                                {
+                                    string lhsType = ResolveType(symbolTable, ref failFlag, messageSB, binaryOp.LeftOperand, currentScopeID);
+                                    string rhsType = ResolveType(symbolTable, ref failFlag, messageSB, binaryOp.RightOperand, currentScopeID);
+
+                                    switch (node)
+                                    {
+                                        case HighPrecedenceOperationNode highOp:
+                                            if (lhsType is not (LanguageNames.Primitives.Int8 or LanguageNames.Primitives.Int16 or LanguageNames.Primitives.Int32 or LanguageNames.Primitives.Int64)
+                                            || rhsType is not (LanguageNames.Primitives.Int8 or LanguageNames.Primitives.Int16 or LanguageNames.Primitives.Int32 or LanguageNames.Primitives.Int64))
+                                            {
+                                                failFlag = true;
+                                                LogMessage(messageSB, highOp, $"Operator '{highOp.Operator}' cannot be applied to operands of type {lhsType} and {rhsType}");
+                                            }
+                                            return lhsType;
+
+                                        case LowPrecedenceOperationNode lowOp:
+                                            switch (lowOp)
+                                            {
+                                                case AddOperationNode or SubtractOperationNode:
+                                                    if (lhsType is not (LanguageNames.Primitives.Int8 or LanguageNames.Primitives.Int16 or LanguageNames.Primitives.Int32 or LanguageNames.Primitives.Int64)
+                                                    || rhsType is not (LanguageNames.Primitives.Int8 or LanguageNames.Primitives.Int16 or LanguageNames.Primitives.Int32 or LanguageNames.Primitives.Int64))
+                                                    {
+                                                        failFlag = true;
+                                                        LogMessage(messageSB, lowOp, $"Operator '{lowOp.Operator}' cannot be applied to operands of type {lhsType} and {rhsType}");
+                                                    }
+                                                    return lhsType;
+
+                                                case OrOperationNode or AndOperationNode:
+                                                    if (lhsType != LanguageNames.Primitives.Bool || rhsType != LanguageNames.Primitives.Bool)
+                                                    {
+                                                        failFlag = true;
+                                                        LogMessage(messageSB, lowOp, $"Operator '{lowOp.Operator}' cannot be applied to operands of type {lhsType} and {rhsType}");
+                                                    }
+                                                    return lhsType;
+
+                                                case EqualityOperationNode:
+                                                    return LanguageNames.Primitives.Bool;
+                                            }
+                                            throw new NotImplementedException("Low precedence binary operation not implemented: " + node.GetType().Name);
+                                    }
+                                    throw new NotImplementedException("Binary operation not implemented: " + node.GetType().Name);
+                                }
                         }
-                        return type;
+                        throw new NotImplementedException("Non-Unary-Or-Binary operation not implemented: " + node.GetType().Name);
                     }
-                    throw new NotImplementedException("Unary operation not implemented: " + node.GetType().Name);
-                }
-                else if (node is BinaryOperationNode)
-                {
-                    if (node is HighPrecedenceOperationNode highOp)
+
+                case IdentifierLeaf identifier:
+                    return symbolTable.TryGetSymbolInfo(currentScopeID, identifier.Value, out SymbolInfo? idInfo)
+                        ? idInfo.Type
+                        : throw new InvalidOperationException($"Scope check failed! Encountered undefined identifier: {identifier}");
+
+                case LiteralLeaf:
+                    if (node is IntLiteralLeaf) return LanguageNames.Primitives.Int32;
+
+                    if (node is BoolLiteralLeaf) return LanguageNames.Primitives.Bool;
+
+                    throw new NotImplementedException("Node type not supported for type resolution: " + node.GetType().Name);
+
+                case FunctionCallExpressionNode funcCallExpr:
+                    string funcSignature = GenerateFunctionSignature(symbolTable, ref failFlag, messageSB, funcCallExpr, currentScopeID);
+
+                    if (!symbolTable.TryGetFunctionInfo(currentScopeID, funcSignature, out FunctionInfo? funcInfo))
                     {
-                        string lhsType = ResolveType(highOp.LeftOperand, currentScopeID, messageSB);
-                        string rhsType = ResolveType(highOp.RightOperand, currentScopeID, messageSB);
-
-                        if (lhsType is not (LanguageNames.Primitives.Int8 or LanguageNames.Primitives.Int16 or LanguageNames.Primitives.Int32 or LanguageNames.Primitives.Int64)
-                        || rhsType is not (LanguageNames.Primitives.Int8 or LanguageNames.Primitives.Int16 or LanguageNames.Primitives.Int32 or LanguageNames.Primitives.Int64))
-                        {
-                            messageSB.AppendLine($"\t[{highOp.StartLine}.{highOp.StartChar}-{highOp.EndLine}.{highOp.EndChar}] "
-                                + $"Operator '{highOp.Operator}' cannot be applied to operands of type {lhsType} and {rhsType}");
-                        }
-                        return lhsType;
+                        throw new InvalidOperationException("Scope check failed! Encountered unknown function overload!");
                     }
-                    else if (node is LowPrecedenceOperationNode lowOp)
-                    {
-                        if (lowOp is AddOperationNode or SubtractOperationNode)
-                        {
-                            string lhsType = ResolveType(lowOp.LeftOperand, currentScopeID, messageSB);
-                            string rhsType = ResolveType(lowOp.RightOperand, currentScopeID, messageSB);
 
-                            if (lhsType is not (LanguageNames.Primitives.Int8 or LanguageNames.Primitives.Int16 or LanguageNames.Primitives.Int32 or LanguageNames.Primitives.Int64)
-                            || rhsType is not (LanguageNames.Primitives.Int8 or LanguageNames.Primitives.Int16 or LanguageNames.Primitives.Int32 or LanguageNames.Primitives.Int64))
-                            {
-                                messageSB.AppendLine($"\t[{lowOp.StartLine}.{lowOp.StartChar}-{lowOp.EndLine}.{lowOp.EndChar}] "
-                                    + $"Operator '{lowOp.Operator}' cannot be applied to operands of type {lhsType} and {rhsType}");
-                            }
-                            return lhsType;
-                        }
-                        else if (lowOp is OrOperationNode or AndOperationNode)
-                        {
-                            string lhsType = ResolveType(lowOp.LeftOperand, currentScopeID, messageSB);
-                            string rhsType = ResolveType(lowOp.RightOperand, currentScopeID, messageSB);
+                    funcCallExpr.FunctionInfo = funcInfo;
+                    return funcInfo.SignatureInfo.Type;
 
-                            if (lhsType != LanguageNames.Primitives.Bool || rhsType != LanguageNames.Primitives.Bool)
-                            {
-                                messageSB.AppendLine($"\t[{lowOp.StartLine}.{lowOp.StartChar}-{lowOp.EndLine}.{lowOp.EndChar}] "
-                                    + $"Operator '{lowOp.Operator}' cannot be applied to operands of type {lhsType} and {rhsType}");
-                            }
-                            return lhsType;
-                        }
-                        else if (lowOp is EqualityOperationNode)
-                        {
-                            ResolveType(lowOp.LeftOperand, currentScopeID, messageSB);
-                            ResolveType(lowOp.RightOperand, currentScopeID, messageSB);
-                            return LanguageNames.Primitives.Bool;
-                        }
-                        throw new NotImplementedException("Low precedence binary operation not implemented: " + node.GetType().Name);
-                    }
-                    throw new NotImplementedException("Binary operation not implemented: " + node.GetType().Name);
-                }
-                throw new NotImplementedException("Non-Unary-Or-Binary operation not implemented: " + node.GetType().Name);
+                default: throw new NotImplementedException("Node type not supported for type resolution: " + node.GetType().Name);
             }
-            else if (node is IdentifierLeaf identifier)
-            {
-                if (SymbolTable.TryGetSymbolInfo(currentScopeID, identifier.Value, out SymbolInfo? info)) return info.Type;
-
-                throw new InvalidOperationException($"Scope check failed! Encountered undefined identifier: {identifier}");
-            }
-            else if (node is LiteralLeaf)
-            {
-                if (node is IntLiteralLeaf) return LanguageNames.Primitives.Int32;
-
-                if (node is BoolLiteralLeaf) return LanguageNames.Primitives.Bool;
-
-                throw new NotImplementedException("Node type not supported for type resolution: " + node.GetType().Name);
-            }
-            else if (node is FunctionCallExpressionNode funcCallExpr)
-            {
-                string name = funcCallExpr.Identifier.Value;
-                var arguments = funcCallExpr.ArgumentList.Children;
-
-                if (!SymbolTable.ContainsFunctionName(currentScopeID, name))
-                {
-                    messageSB.AppendLine($"\t[{funcCallExpr.StartLine}.{funcCallExpr.StartChar}-{funcCallExpr.EndLine}.{funcCallExpr.EndChar}] "
-                        + $"Function '{name}' is not defined in the current context!");
-                    return LanguageNames.Keywords.Void;
-                }
-
-                List<string> argumentTypes = new(arguments.Count);
-                foreach (SyntaxNode arg in arguments)
-                {
-                    string argType = ResolveType(arg, currentScopeID, messageSB);
-                    argumentTypes.Add(argType);
-                }
-
-                string funcSignature = GetFunctionSignature(name, argumentTypes);
-
-                if (!SymbolTable.TryGetFunctionInfo(currentScopeID, funcSignature, out FunctionInfo? funcInfo))
-                {
-                    messageSB.AppendLine($"\t[{funcCallExpr.StartLine}.{funcCallExpr.StartChar}-{funcCallExpr.EndLine}.{funcCallExpr.EndChar}] "
-                        + $"No function overload matching signature '{funcSignature}' is defined in the current context!");
-                    return LanguageNames.Keywords.Void;
-                }
-                
-                funcCallExpr.FunctionInfo = funcInfo;
-                return funcInfo.SignatureInfo.Type;
-            }
-            else throw new NotImplementedException("Node type not supported for type resolution: " + node.GetType().Name);
         }
 
         public string GetPrintable() => SymbolTable.GetPrintable();

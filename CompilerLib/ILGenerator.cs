@@ -86,6 +86,7 @@ namespace CompilerLib
             switch (opCode)
             {
                 case OpCode.nop: return "nop";
+                case OpCode.ret: PopStack(); return "ret";
                 case OpCode.add: PopStack(2); return "add";
                 case OpCode.sub: PopStack(2); return "sub";
                 case OpCode.mul: PopStack(2); return "mul";

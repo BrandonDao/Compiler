@@ -79,28 +79,40 @@ namespace CompilerLib.Parser.Nodes.Scopes
 
             foreach (var child in Children)
             {
-                if (child is VariableDefinitionNode varDefNode)
+                switch (child)
                 {
-                    switch (varDefNode.AssignedValue)
-                    {
-                        case ValueOperationNode valOp:
-                            valOp.GenerateCode(ilGen, symbolTable, FunctionInfo.ChildScopeInfo.ID, statementInfos, indentLevel, localIdToIndex);
-                            break;
-                        default:
-                            ResolveOperand(ilGen, symbolTable, FunctionInfo.ChildScopeInfo.ID, statementInfos, indentLevel, localIdToIndex, varDefNode.AssignedValue);
-                            break;
-                    }
-                    statementInfos.Add((ilGen.Emit(OpCode.stloc, localIdToIndex[varDefNode.NameTypeNode.Name]), indentLevel));
+                    case VariableDefinitionNode varDefNode:
+                        switch (varDefNode.AssignedValue)
+                        {
+                            case ValueOperationNode valOp:
+                                valOp.GenerateCode(ilGen, symbolTable, FunctionInfo.ChildScopeInfo.ID, statementInfos, indentLevel, localIdToIndex);
+                                break;
+
+                            default:
+                                ResolveOperand(ilGen, symbolTable, FunctionInfo.ChildScopeInfo.ID, statementInfos, indentLevel, localIdToIndex, varDefNode.AssignedValue);
+                                break;
+                        }
+                        statementInfos.Add((ilGen.Emit(OpCode.stloc, localIdToIndex[varDefNode.NameTypeNode.Name]), indentLevel));
+                        break;
+
+                    case FunctionCallStatementNode funcCallNode:
+                        ResolveOperand(ilGen, symbolTable, FunctionInfo.ChildScopeInfo.ID, statementInfos, indentLevel, localIdToIndex, funcCallNode.FunctionCallExpression);
+                        break;
+
+                    case ReturnStatementNode returnNode:
+                        if (returnNode.ReturnValue != null)
+                        {
+                            ResolveOperand(ilGen, symbolTable, FunctionInfo.ChildScopeInfo.ID, statementInfos, indentLevel, localIdToIndex, returnNode.ReturnValue);
+                        }
+                        statementInfos.Add((ilGen.Emit(OpCode.ret), indentLevel));
+                        break;
+
+                    case EmptyStatementNode:
+                        statementInfos.Add((ilGen.Emit(OpCode.nop), indentLevel));
+                        break;
+
+                    default: throw new NotImplementedException();
                 }
-                else if (child is FunctionCallStatementNode funcCallNode)
-                {
-                    ResolveOperand(ilGen, symbolTable, FunctionInfo.ChildScopeInfo.ID, statementInfos, indentLevel, localIdToIndex, funcCallNode.FunctionCallExpression);
-                }
-                else if (child is EmptyStatementNode)
-                {
-                    statementInfos.Add((ilGen.Emit(OpCode.nop), indentLevel));
-                }
-                else throw new NotImplementedException();
             }
 
             codeBuilder.AppendIndentedLine($".maxstack {ilGen.MaxStack}", indentLevel);
@@ -125,7 +137,6 @@ namespace CompilerLib.Parser.Nodes.Scopes
             {
                 codeBuilder.AppendIndentedLine(statement, statementIndentLevel);
             }
-            codeBuilder.AppendIndentedLine("ret", indentLevel);
         }
     }
     public class LocalBlockNode(OpenBraceLeaf openBrace, List<SyntaxNode> statements, CloseBraceLeaf closeBrace)

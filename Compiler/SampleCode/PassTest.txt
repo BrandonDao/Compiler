@@ -15,13 +15,16 @@ namespace Program.ExtendedName
         Function1(_false);
     }
 
-    fn Function1(a:i32, b:i32) -> void
+    fn Function1(a:i32, b:i32) -> i32
     {
-        debugPrint(a + b);
+        let result: i32 = a + b;
+        debugPrint(result);
+        return result;
     }
     fn Function1(x:bool) -> void
     {
         debugPrint(x);
+        return;
         debugPrint(!false);
     }
 }
