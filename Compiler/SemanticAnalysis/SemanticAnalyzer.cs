@@ -1,12 +1,12 @@
 using System.Text;
 using CompilerLib;
-using CompilerLib.Parser.Nodes;
-using CompilerLib.Parser.Nodes.Functions;
-using CompilerLib.Parser.Nodes.Operators;
-using CompilerLib.Parser.Nodes.Scopes;
-using CompilerLib.Parser.Nodes.Statements;
-using CompilerLib.Parser.Nodes.Statements.Controls;
-using CompilerLib.Parser.Nodes.Types;
+using CompilerLib.Nodes;
+using CompilerLib.Nodes.Functions;
+using CompilerLib.Nodes.Operators;
+using CompilerLib.Nodes.Scopes;
+using CompilerLib.Nodes.Statements;
+using CompilerLib.Nodes.Statements.Controls;
+using CompilerLib.Nodes.Types;
 using static CompilerLib.SymbolTable;
 
 namespace Compiler.SemanticAnalysis

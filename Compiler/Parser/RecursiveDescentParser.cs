@@ -1,15 +1,15 @@
-using CompilerLib.Parser.Nodes;
-using CompilerLib.Parser.Nodes.Functions;
-using CompilerLib.Parser.Nodes.Operators;
-using CompilerLib.Parser.Nodes.Punctuation;
-using CompilerLib.Parser.Nodes.Scopes;
-using CompilerLib.Parser.Nodes.Statements;
-using CompilerLib.Parser.Nodes.Statements.Controls;
-using CompilerLib.Parser.Nodes.Types;
+using CompilerLib.Nodes;
+using CompilerLib.Nodes.Functions;
+using CompilerLib.Nodes.Operators;
+using CompilerLib.Nodes.Punctuation;
+using CompilerLib.Nodes.Scopes;
+using CompilerLib.Nodes.Statements;
+using CompilerLib.Nodes.Statements.Controls;
+using CompilerLib.Nodes.Types;
 
 namespace Compiler.Parser
 {
-    public partial class RecursiveDescentParser : IParser
+    public class RecursiveDescentParser : IParser
     {
         public static RecursiveDescentParser Instance { get; private set; } = new();
 

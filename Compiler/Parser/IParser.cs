@@ -1,4 +1,4 @@
-using CompilerLib.Parser.Nodes;
+using CompilerLib.Nodes;
 
 namespace Compiler.Parser
 {

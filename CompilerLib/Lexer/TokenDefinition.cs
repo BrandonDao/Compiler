@@ -1,5 +1,5 @@
-using System.Text.RegularExpressions;
-using CompilerLib.Parser.Nodes;
+            using System.Text.RegularExpressions;
+using CompilerLib.Nodes;
 using static CompilerLib.Lexer.TokenDefinition;
 
 namespace CompilerLib.Lexer

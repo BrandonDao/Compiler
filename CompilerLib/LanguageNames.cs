@@ -1,4 +1,4 @@
-namespace CompilerLib.Parser.Nodes.Types
+namespace CompilerLib
 {
     public static class LanguageNames
     {

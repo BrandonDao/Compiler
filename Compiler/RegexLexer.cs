@@ -1,13 +1,14 @@
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Reflection;
+using CompilerLib;
 using CompilerLib.Lexer;
-using CompilerLib.Parser.Nodes;
-using CompilerLib.Parser.Nodes.Operators;
-using CompilerLib.Parser.Nodes.Punctuation;
-using CompilerLib.Parser.Nodes.Statements.Controls;
-using CompilerLib.Parser.Nodes.Scopes;
-using CompilerLib.Parser.Nodes.Types;
+using CompilerLib.Nodes;
+using CompilerLib.Nodes.Operators;
+using CompilerLib.Nodes.Punctuation;
+using CompilerLib.Nodes.Statements.Controls;
+using CompilerLib.Nodes.Scopes;
+using CompilerLib.Nodes.Types;
 
 namespace Compiler
 {

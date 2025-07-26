@@ -1,8 +1,7 @@
-using CompilerLib.Parser.Nodes;
-using CompilerLib.Parser.Nodes.Functions;
-using CompilerLib.Parser.Nodes.Operators;
-using CompilerLib.Parser.Nodes.Types;
-using static CompilerLib.SymbolTable;
+using CompilerLib.Nodes;
+using CompilerLib.Nodes.Functions;
+using CompilerLib.Nodes.Operators;
+using CompilerLib.Nodes.Types;
 
 namespace CompilerLib
 {

@@ -1,6 +1,6 @@
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
-using CompilerLib.Parser.Nodes.Functions;
+using CompilerLib.Nodes.Functions;
 
 namespace CompilerLib
 {
