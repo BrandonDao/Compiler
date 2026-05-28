@@ -145,8 +145,8 @@ namespace Compiler.Parser
                     AndOperatorLeaf => 20,
                     EqualityOperatorLeaf => 30,
 
-                    AddOperatorLeaf
-                    or NegateOperatorLeaf
+                    PlusOperatorLeaf
+                    or MinusOperatorLeaf
                     => 40,
 
                     MultiplyOperatorLeaf
@@ -165,8 +165,8 @@ namespace Compiler.Parser
                 List<SyntaxNode> children = [lhs, op, rhs];
                 return op switch
                 {
-                    AddOperatorLeaf => new AddOperationNode(children),
-                    NegateOperatorLeaf => new SubtractOperationNode(children),
+                    PlusOperatorLeaf => new AddOperationNode(children),
+                    MinusOperatorLeaf => new SubtractOperationNode(children),
                     MultiplyOperatorLeaf => new MultiplyOperationNode(children),
                     DivideOperatorLeaf => new DivideOperationNode(children),
                     ModOperatorLeaf => new ModOperationNode(children),

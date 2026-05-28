@@ -35,8 +35,8 @@ namespace Compiler
             new(LexPriority.PrimaryPunctuation, @"\.", (v, sl, sc, el, ec) => new DotLeaf(v, sl, sc, el, ec)),
 
             new(LexPriority.PrimaryOperator, @"==", (v, sl, sc, el, ec) => new EqualityOperatorLeaf(v, sl, sc, el, ec)),
-            new(LexPriority.PrimaryOperator, @"-", (v, sl, sc, el, ec) => new NegateOperatorLeaf(v, sl, sc, el, ec)),
-            new(LexPriority.PrimaryOperator, @"\+", (v, sl, sc, el, ec) => new AddOperatorLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.PrimaryOperator, @"-", (v, sl, sc, el, ec) => new MinusOperatorLeaf(v, sl, sc, el, ec)),
+            new(LexPriority.PrimaryOperator, @"\+", (v, sl, sc, el, ec) => new PlusOperatorLeaf(v, sl, sc, el, ec)),
             new(LexPriority.PrimaryOperator, @"\*", (v, sl, sc, el, ec) => new MultiplyOperatorLeaf(v, sl, sc, el, ec)),
             new(LexPriority.PrimaryOperator, @"/", (v, sl, sc, el, ec) => new DivideOperatorLeaf(v, sl, sc, el, ec)),
             new(LexPriority.PrimaryOperator, @"%", (v, sl, sc, el, ec) => new ModOperatorLeaf(v, sl, sc, el, ec)),
