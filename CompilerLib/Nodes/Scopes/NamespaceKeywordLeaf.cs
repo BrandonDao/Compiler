@@ -1,5 +1,4 @@
-namespace CompilerLib.Nodes.Scopes
-{
-    public class NamespaceKeywordLeaf(string value, int startLine, int startChar, int endLine, int endChar)
-        : KeywordLeaf(value, startLine, startChar, endLine, endChar);
-}
+namespace CompilerLib.Nodes.Scopes;
+
+public class NamespaceKeywordLeaf(string value, int startLine, int startChar, int endLine, int endChar)
+    : KeywordLeaf(value, startLine, startChar, endLine, endChar);

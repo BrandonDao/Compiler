@@ -1,29 +1,28 @@
 using CompilerLib.Nodes.Types;
 using static CompilerLib.SymbolTable;
 
-namespace CompilerLib.Nodes.Functions
+namespace CompilerLib.Nodes.Functions;
+
+public class FunctionCallExpressionNode : SyntaxNode
 {
-    public class FunctionCallExpressionNode : SyntaxNode
+    public IdentifierLeaf Identifier { get; }
+    public ArgumentListNode ArgumentList { get; }
+    public FunctionInfo? FunctionInfo { get; set; }
+
+    public FunctionCallExpressionNode(IdentifierLeaf id, ArgumentListNode args)
+        : base([id, args])
     {
-        public IdentifierLeaf Identifier { get; }
-        public ArgumentListNode ArgumentList { get; }
-        public FunctionInfo? FunctionInfo { get; set; }
+        Identifier = id;
+        ArgumentList = args;
+        UpdateRange();
+    }
 
-        public FunctionCallExpressionNode(IdentifierLeaf id, ArgumentListNode args)
-            : base([id, args])
+    public override SyntaxNode ToAST()
+    {
+        for (int i = 0; i < Children.Count; i++)
         {
-            Identifier = id;
-            ArgumentList = args;
-            UpdateRange();
+            Children[i] = Children[i].ToAST();
         }
-
-        public override SyntaxNode ToAST()
-        {
-            for (int i = 0; i < Children.Count; i++)
-            {
-                Children[i] = Children[i].ToAST();
-            }
-            return this;
-        }
+        return this;
     }
 }

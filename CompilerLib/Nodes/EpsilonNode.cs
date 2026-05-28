@@ -1,10 +1,9 @@
-namespace CompilerLib.Nodes
-{
-    public class EpsilonNode : SyntaxNode
-    {
-        public static EpsilonNode Instance { get; } = new();
-        private EpsilonNode() { }
+namespace CompilerLib.Nodes;
 
-        public override SyntaxNode ToAST() => this;
-    }
+public class EpsilonNode : SyntaxNode
+{
+    public static EpsilonNode Instance { get; } = new();
+    private EpsilonNode() { }
+
+    public override SyntaxNode ToAST() => this;
 }

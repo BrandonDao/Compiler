@@ -1,5 +1,4 @@
-namespace CompilerLib.Nodes
-{
-    public class FunctionKeywordLeaf(string value, int startLine, int startChar, int endLine, int endChar)
-        : KeywordLeaf(value, startLine, startChar, endLine, endChar);
-}
+namespace CompilerLib.Nodes;
+
+public class FunctionKeywordLeaf(string value, int startLine, int startChar, int endLine, int endChar)
+    : KeywordLeaf(value, startLine, startChar, endLine, endChar);

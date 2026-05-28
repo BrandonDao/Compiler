@@ -1,14 +1,13 @@
-namespace CompilerLib.Nodes
+namespace CompilerLib.Nodes;
+
+public class VoidLeaf(string value, int startLine, int startChar, int endLine, int endChar)
+    : KeywordLeaf(value, startLine, startChar, endLine, endChar);
+public class ImplicitVoidLeaf(int startLine, int startChar)
+    : VoidLeaf(LanguageNames.Keywords.Void, startLine, startChar, startLine, startChar)
 {
-    public class VoidLeaf(string value, int startLine, int startChar, int endLine, int endChar)
-        : KeywordLeaf(value, startLine, startChar, endLine, endChar);
-    public class ImplicitVoidLeaf(int startLine, int startChar)
-        : VoidLeaf(LanguageNames.Keywords.Void, startLine, startChar, startLine, startChar)
+    public override string GetPrintable(int indent)
     {
-        public override string GetPrintable(int indent)
-        {
-            var indentString = new string(' ', indent);
-            return $"[{StartLine}.{StartChar}]\t\t{indentString}{GetType().Name}\n";
-        }
+        var indentString = new string(' ', indent);
+        return $"[{StartLine}.{StartChar}]\t\t{indentString}{GetType().Name}\n";
     }
 }

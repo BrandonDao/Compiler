@@ -3,6 +3,10 @@
 # Require file-scoped namespaces
 csharp_style_namespace_declarations = file_scoped:error
 
+# Require target-typed new
+csharp_style_implicit_object_creation_when_type_is_apparent = true:warning
+
+
 # Require braces
 csharp_prefer_braces = true:error
 

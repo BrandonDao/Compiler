@@ -1,8 +1,7 @@
-namespace CompilerLib.Nodes.Scopes
+namespace CompilerLib.Nodes.Scopes;
+
+public interface IContainsScopeNode : IHasChildren
 {
-    public interface IContainsScopeNode : IHasChildren
-    {
-        public string Name { get; }
-        public BlockNode Block { get; }
-    }
+    public string Name { get; }
+    public BlockNode Block { get; }
 }

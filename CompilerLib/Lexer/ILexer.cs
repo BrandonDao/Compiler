@@ -1,12 +1,11 @@
 using CompilerLib.Nodes;
 
-namespace CompilerLib.Lexer
-{
-    public interface ILexer
-    {
-        delegate void OnUnexpectedTokenHandler(int lineIdx, int charIdx, string tokenValue);
+namespace CompilerLib.Lexer;
 
-        List<LeafNode> TokenizeFile(string filePath, OnUnexpectedTokenHandler? onUnexpectedToken = null);
-        List<LeafNode> Tokenize(string text, OnUnexpectedTokenHandler? onUnexpectedToken = null);
-    }
+public interface ILexer
+{
+    delegate void OnUnexpectedTokenHandler(int lineIdx, int charIdx, string tokenValue);
+
+    List<LeafNode> TokenizeFile(string filePath, OnUnexpectedTokenHandler? onUnexpectedToken = null);
+    List<LeafNode> Tokenize(string text, OnUnexpectedTokenHandler? onUnexpectedToken = null);
 }

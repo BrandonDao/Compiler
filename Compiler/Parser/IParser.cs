@@ -1,10 +1,9 @@
 using CompilerLib.Nodes;
 
-namespace Compiler.Parser
+namespace Compiler.Parser;
+
+public interface IParser
 {
-    public interface IParser
-    {
-        public ParserEntrypointNode? ParseTokensToCST(List<LeafNode> tokens);
-        public ParserEntrypointNode ParseCSTToAST(ParserEntrypointNode root);
-    }
+    public ParserEntrypointNode? ParseTokensToCST(List<LeafNode> tokens);
+    public ParserEntrypointNode ParseCSTToAST(ParserEntrypointNode root);
 }
