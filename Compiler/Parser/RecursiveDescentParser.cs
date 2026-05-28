@@ -125,12 +125,13 @@ public class RecursiveDescentParser : IParser
 
     private static SyntaxNode ParseExpression(List<LeafNode> tokens, ref int position)
         => ParseExpression(tokens, ref position, minPrecedence: 0);
+
     private static SyntaxNode ParseExpression(List<LeafNode> tokens, ref int position, int minPrecedence)
     {
-        SyntaxNode expr = ParsePrimary(tokens, ref position);
+        SyntaxNode expr = ParsePrefix(tokens, ref position);
 
         // look ahead one to check for operator + precedence
-        while (position < tokens.Count && TryGetOperatorPrecedence(tokens[position], out int opPrecedence))
+        while (position < tokens.Count && TryGetInfixPrecedence(tokens[position], out int opPrecedence))
         {
             // led = left/infix denotation parsing (terminology from Pratt parsing)
             LeafNode opToken = tokens[position];
@@ -152,8 +153,7 @@ public class RecursiveDescentParser : IParser
         }
         return expr;
 
-        // Helpers
-        static bool TryGetOperatorPrecedence(LeafNode token, out int precedence)
+        static bool TryGetInfixPrecedence(LeafNode token, out int precedence)
         {
             precedence = token switch
             {
@@ -174,6 +174,7 @@ public class RecursiveDescentParser : IParser
             };
             return precedence != -1;
         }
+
         static bool IsLeftAssociative(LeafNode token) => token is not AssignmentOperatorLeaf;
 
         static SyntaxNode CreateBinaryOp(LeafNode op, SyntaxNode lhs, SyntaxNode rhs)
@@ -189,69 +190,77 @@ public class RecursiveDescentParser : IParser
                 OrOperatorLeaf => new OrOperationNode(children),
                 AndOperatorLeaf => new AndOperationNode(children),
                 EqualityOperatorLeaf => new EqualityOperationNode(children),
-                _ => throw new ArgumentException($"Unknown operator: {op}! This should never happen if {nameof(TryGetOperatorPrecedence)} is correct.")
+                _ => throw new ArgumentException($"Unknown operator: {op}! This should never happen if {nameof(TryGetInfixPrecedence)} is correct.")
             };
         }
     }
 
     // nud = null/prefix denotation parsing
-    private static SyntaxNode ParsePrimary(List<LeafNode> tokens, ref int position)
+    private static SyntaxNode ParsePrefix(List<LeafNode> tokens, ref int position) => tokens[position] switch
     {
-        switch (tokens[position])
+        NotOperatorLeaf notToken => ParseNotOperator(notToken, tokens, ref position),
+        OpenParenthesisLeaf openToken => ParseParenthesizedExpression(openToken, tokens, ref position),
+        IdentifierLeaf idToken => ParseIdentifierOrFunctionCall(idToken, tokens, ref position),
+        IntLiteralLeaf litToken => ParseIntLiteral(litToken, ref position),
+        BoolLiteralLeaf boolToken => ParseBoolLiteral(boolToken, ref position),
+        _ => throw new ArgumentException($"Could not parse Primary Term, found {tokens[position]}!")
+    };
+
+    private static NotOperationNode ParseNotOperator(NotOperatorLeaf notToken, List<LeafNode> tokens, ref int position)
+    {
+        position++;
+        SyntaxNode? notValueNode = ParseExpression(tokens, ref position, minPrecedence: int.MaxValue)
+            ?? throw new ArgumentException("Could not parse the expression after the '!' token!");
+
+        NotOperationNode notOpNode = new([notToken, notValueNode]);
+        notOpNode.UpdateRange();
+        return notOpNode;
+    }
+
+    private static ParenthesizedExpression ParseParenthesizedExpression(OpenParenthesisLeaf openToken, List<LeafNode> tokens, ref int position)
+    {
+        position++;
+        SyntaxNode? exprNode = ParseExpression(tokens, ref position)
+            ?? throw new ArgumentException("Could not parse the expression after the '(' token!");
+
+        if (position >= tokens.Count)
         {
-            case NotOperatorLeaf notToken:
-                {
-                    position++;
-                    SyntaxNode? notValueNode = ParseExpression(tokens, ref position, minPrecedence: int.MaxValue)
-                        ?? throw new ArgumentException("Could not parse the expression after the '!' token!");
-
-                    NotOperationNode notOpNode = new([notToken, notValueNode]);
-                    notOpNode.UpdateRange();
-                    return notOpNode;
-                }
-
-            case OpenParenthesisLeaf openToken:
-                {
-                    position++;
-                    SyntaxNode? exprNode = ParseExpression(tokens, ref position)
-                        ?? throw new ArgumentException("Could not parse the expression after the '(' token!");
-
-                    if (position >= tokens.Count)
-                    {
-                        throw new ArgumentException("Expected ')' token, found end of input instead!");
-                    }
-
-                    if (tokens[position++] is not CloseParenthesisLeaf closeToken)
-                    {
-                        throw new ArgumentException("Expected ')' token!");
-                    }
-
-                    ParenthesizedExpression parenthesizedExpr = new(openToken, exprNode, closeToken);
-                    parenthesizedExpr.UpdateRange();
-                    return parenthesizedExpr;
-                }
-
-            case IdentifierLeaf idToken:
-                position++;
-
-                if (position >= tokens.Count || tokens[position] is not OpenParenthesisLeaf openParen)
-                {
-                    return idToken;
-                }
-
-                position++; // consume openParen
-                return ParseFuncCallExpr(tokens, ref position, openParen, idToken);
-
-            case IntLiteralLeaf litToken:
-                position++;
-                return litToken;
-
-            case BoolLiteralLeaf strLitToken:
-                position++;
-                return strLitToken;
-
-            default: throw new ArgumentException($"Could not parse Primary Term, found {tokens[position]}!");
+            throw new ArgumentException("Expected ')' token, found end of input instead!");
         }
+
+        if (tokens[position++] is not CloseParenthesisLeaf closeToken)
+        {
+            throw new ArgumentException("Expected ')' token!");
+        }
+
+        ParenthesizedExpression parenthesizedExpr = new(openToken, exprNode, closeToken);
+        parenthesizedExpr.UpdateRange();
+        return parenthesizedExpr;
+    }
+
+    private static SyntaxNode ParseIdentifierOrFunctionCall(IdentifierLeaf idToken, List<LeafNode> tokens, ref int position)
+    {
+        position++;
+
+        if (position >= tokens.Count || tokens[position] is not OpenParenthesisLeaf openParen)
+        {
+            return idToken;
+        }
+
+        position++; // consume openParen
+        return ParseFuncCallExpr(tokens, ref position, openParen, idToken);
+    }
+
+    private static IntLiteralLeaf ParseIntLiteral(IntLiteralLeaf litToken, ref int position)
+    {
+        position++;
+        return litToken;
+    }
+
+    private static BoolLiteralLeaf ParseBoolLiteral(BoolLiteralLeaf boolToken, ref int position)
+    {
+        position++;
+        return boolToken;
     }
 
     private static FunctionCallExpressionNode ParseFuncCallExpr(List<LeafNode> tokens, ref int position, OpenParenthesisLeaf openParen, IdentifierLeaf idToken)
