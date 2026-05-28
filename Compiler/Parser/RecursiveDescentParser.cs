@@ -11,6 +11,50 @@ namespace Compiler.Parser;
 
 public class RecursiveDescentParser : IParser
 {
+    private class TokenReader(List<LeafNode> tokens)
+    {
+        private readonly List<LeafNode> tokens = tokens;
+        private int position = 0;
+
+        public bool IsAtEnd => position >= tokens.Count;
+        public LeafNode CurrentToken
+        {
+            get
+            {
+                if (IsAtEnd)
+                {
+                    throw new ArgumentException("Unexpected end of input!");
+                }
+                return tokens[position];
+            }
+        }
+
+        public void Advance() => position++;
+
+        // This signature isn't quite standard/idiomatic C#, but it allows type inference without using `var`
+        // - `var` usage will remain an error to prevent agentic AI abuse
+        // - `T token = Consume<T>();` may be more idiomatic but requires typing `T` twice which can become pretty verbose.
+        public void Consume<T>(out T token) where T : LeafNode
+            => token = Consume<T>();
+        public void Consume<T>(out T token, string messageOnUnexpectedToken) where T : LeafNode
+            => token = Consume<T>(messageOnUnexpectedToken);
+        public T Consume<T>() where T : LeafNode
+            => Consume<T>($"Expected token of type {typeof(T).Name}, not {tokens[position]}!");
+        public T Consume<T>(string messageOnUnexpectedToken) where T : LeafNode
+        {
+            if (IsAtEnd)
+            {
+                throw new ArgumentException($"Unexpected end of input, expected token of type {typeof(T).Name}!");
+            }
+            if (tokens[position] is not T token)
+            {
+                throw new ArgumentException(messageOnUnexpectedToken);
+            }
+            position++;
+            return token;
+        }
+    }
+
     public static RecursiveDescentParser Instance { get; private set; } = new();
 
     private RecursiveDescentParser() { }
@@ -22,9 +66,9 @@ public class RecursiveDescentParser : IParser
             return null;
         }
 
-        int position = 0;
         tokens = HangWhitespace(tokens);
-        return new ParserEntrypointNode(ParseNamespaceDefinition(tokens, ref position));
+        TokenReader reader = new(tokens);
+        return new ParserEntrypointNode(ParseNamespaceDefinition(reader));
     }
 
     public ParserEntrypointNode ParseCSTToAST(ParserEntrypointNode root) => root.ToAST();
@@ -59,82 +103,52 @@ public class RecursiveDescentParser : IParser
 
 
 
-    private static TypeLeafNode ParseType(List<LeafNode> tokens, ref int position)
+    private static TypeLeafNode ParseType(TokenReader reader)
+        => reader.CurrentToken switch
+        {
+            IdentifierLeaf => reader.Consume<IdentifierLeaf>(),
+            Int8Leaf => reader.Consume<Int8Leaf>(),
+            Int16Leaf => reader.Consume<Int16Leaf>(),
+            Int32Leaf => reader.Consume<Int32Leaf>(),
+            Int64Leaf => reader.Consume<Int64Leaf>(),
+            BoolLeaf => reader.Consume<BoolLeaf>(),
+            _ => throw new ArgumentException($"Expected an identifier or primitive type, not {reader.CurrentToken}!")
+        };
+
+
+    private static VariableDefinitionNode ParseVariableDefinition(TokenReader reader)
     {
-        switch (tokens[position])
-        {
-            case IdentifierLeaf idToken: position++; return idToken;
-            case Int8Leaf int8Token: position++; return int8Token;
-            case Int16Leaf int16Token: position++; return int16Token;
-            case Int32Leaf int32Token: position++; return int32Token;
-            case Int64Leaf int64Token: position++; return int64Token;
-            case BoolLeaf boolToken: position++; return boolToken;
-            default: throw new ArgumentException($"Expected an identifier or primitive type, not {tokens[position]}!");
-        }
-    }
-
-    private static VariableDefinitionNode ParseVariableDefinition(List<LeafNode> tokens, ref int position)
-    {
-        if (tokens[position] is not LetKeywordLeaf letKeywordLeaf)
-        {
-            throw new ArgumentException($"Expected 'let' keyword at start of variable definition, not {tokens[position]}!");
-        }
-
-        position++;
-        VariableNameTypeNode varNameTypeNode = ParseVariableNameType(tokens, ref position);
-
-        if (tokens[position] is not AssignmentOperatorLeaf assignmentOpLeaf)
-        {
-            throw new ArgumentException($"Expected '=' token after variable name and type, not {tokens[position]}!");
-        }
-
-        position++;
-        SyntaxNode valueExpr = ParseExpression(tokens, ref position);
-
-        if (tokens[position] is not SemicolonLeaf semicolonLeaf)
-        {
-            throw new ArgumentException($"Expected ';' token at the end of variable definition, not {tokens[position]}!");
-        }
-
-        position++;
+        reader.Consume(out LetKeywordLeaf letKeywordLeaf);
+        VariableNameTypeNode varNameTypeNode = ParseVariableNameType(reader);
+        reader.Consume(out AssignmentOperatorLeaf assignmentOpLeaf);
+        SyntaxNode valueExpr = ParseExpression(reader);
+        reader.Consume(out SemicolonLeaf semicolonLeaf);
 
         return new VariableDefinitionNode(letKeywordLeaf, varNameTypeNode, assignmentOpLeaf, valueExpr, semicolonLeaf);
     }
 
-    private static VariableNameTypeNode ParseVariableNameType(List<LeafNode> tokens, ref int position)
+    private static VariableNameTypeNode ParseVariableNameType(TokenReader reader)
     {
-        if (tokens[position] is not IdentifierLeaf idToken)
-        {
-            throw new ArgumentException($"Expected an identifier as variable name, not {tokens[position]}!");
-        }
-
-        position++;
-
-        if (tokens[position] is not ColonLeaf colonToken)
-        {
-            throw new ArgumentException($"Expected a ':' token after variable name '{idToken.Value}', not {tokens[position]}!");
-        }
-
-        position++;
-
-        TypeLeafNode typeNode = ParseType(tokens, ref position)
-            ?? throw new ArgumentException($"Expected a type after ':' token, not {tokens[position]}!");
+        reader.Consume(out IdentifierLeaf idToken);
+        reader.Consume(out ColonLeaf colonToken);
+        TypeLeafNode typeNode = ParseType(reader)
+            ?? throw new ArgumentException($"Expected a type after ':' token, not {reader.CurrentToken}!");
 
         return new VariableNameTypeNode(idToken, colonToken, typeNode);
     }
 
-    private static SyntaxNode ParseExpression(List<LeafNode> tokens, ref int position)
-        => ParseExpression(tokens, ref position, minPrecedence: 0);
+    private static SyntaxNode ParseExpression(TokenReader reader)
+        => ParseExpression(reader, minPrecedence: 0);
 
-    private static SyntaxNode ParseExpression(List<LeafNode> tokens, ref int position, int minPrecedence)
+    private static SyntaxNode ParseExpression(TokenReader reader, int minPrecedence)
     {
-        SyntaxNode expr = ParsePrefix(tokens, ref position);
+        SyntaxNode expr = ParsePrefix(reader);
 
         // look ahead one to check for operator + precedence
-        while (position < tokens.Count && TryGetInfixPrecedence(tokens[position], out int opPrecedence))
+        while (!reader.IsAtEnd && TryGetInfixPrecedence(reader.CurrentToken, out int opPrecedence))
         {
             // led = left/infix denotation parsing (terminology from Pratt parsing)
-            LeafNode opToken = tokens[position];
+            LeafNode opToken = reader.CurrentToken;
             bool isLeftAssociative = IsLeftAssociative(opToken);
 
             if (opPrecedence < minPrecedence)
@@ -142,11 +156,10 @@ public class RecursiveDescentParser : IParser
                 break;
             }
 
-            position++;
+            reader.Advance();
 
             SyntaxNode rhs = ParseExpression(
-                tokens,
-                ref position,
+                reader,
                 isLeftAssociative ? opPrecedence + 1 : opPrecedence); // +1 to enforce leftward grouping for same-precedence ops
 
             expr = CreateBinaryOp(opToken, expr, rhs);
@@ -196,20 +209,31 @@ public class RecursiveDescentParser : IParser
     }
 
     // nud = null/prefix denotation parsing
-    private static SyntaxNode ParsePrefix(List<LeafNode> tokens, ref int position) => tokens[position] switch
+    private static SyntaxNode ParsePrefix(TokenReader reader) => reader.CurrentToken switch
     {
-        NotOperatorLeaf notToken => ParseNotOperator(notToken, tokens, ref position),
-        OpenParenthesisLeaf openToken => ParseParenthesizedExpression(openToken, tokens, ref position),
-        IdentifierLeaf idToken => ParseIdentifierOrFunctionCall(idToken, tokens, ref position),
-        IntLiteralLeaf litToken => ParseIntLiteral(litToken, ref position),
-        BoolLiteralLeaf boolToken => ParseBoolLiteral(boolToken, ref position),
-        _ => throw new ArgumentException($"Could not parse Primary Term, found {tokens[position]}!")
+        NotOperatorLeaf notToken => ParseNotOperator(notToken, reader),
+        OpenParenthesisLeaf openToken => ParseParenthesizedExpression(openToken, reader),
+        IdentifierLeaf idToken => ParseIdentifierOrFunctionCall(idToken, reader),
+        IntLiteralLeaf intLiteralLeaf => ParseIntLiteral(intLiteralLeaf, reader),
+        BoolLiteralLeaf boolLiteralLeaf => ParseBoolLiteral(boolLiteralLeaf, reader),
+        _ => throw new ArgumentException($"Could not parse Primary Term, found {reader.CurrentToken}!")
     };
 
-    private static NotOperationNode ParseNotOperator(NotOperatorLeaf notToken, List<LeafNode> tokens, ref int position)
+    private static IntLiteralLeaf ParseIntLiteral(IntLiteralLeaf intLiteralLeaf, TokenReader reader)
     {
-        position++;
-        SyntaxNode? notValueNode = ParseExpression(tokens, ref position, minPrecedence: int.MaxValue)
+        reader.Advance();
+        return intLiteralLeaf;
+    }
+    private static BoolLiteralLeaf ParseBoolLiteral(BoolLiteralLeaf boolLiteralLeaf, TokenReader reader)
+    {
+        reader.Advance();
+        return boolLiteralLeaf;
+    }
+
+    private static NotOperationNode ParseNotOperator(NotOperatorLeaf notToken, TokenReader reader)
+    {
+        reader.Advance(); // consume the '!' token
+        SyntaxNode? notValueNode = ParseExpression(reader, minPrecedence: int.MaxValue)
             ?? throw new ArgumentException("Could not parse the expression after the '!' token!");
 
         NotOperationNode notOpNode = new([notToken, notValueNode]);
@@ -217,148 +241,115 @@ public class RecursiveDescentParser : IParser
         return notOpNode;
     }
 
-    private static ParenthesizedExpression ParseParenthesizedExpression(OpenParenthesisLeaf openToken, List<LeafNode> tokens, ref int position)
+    private static ParenthesizedExpression ParseParenthesizedExpression(OpenParenthesisLeaf openToken, TokenReader reader)
     {
-        position++;
-        SyntaxNode? exprNode = ParseExpression(tokens, ref position)
+        reader.Advance(); // consume the '(' token
+        SyntaxNode? exprNode = ParseExpression(reader)
             ?? throw new ArgumentException("Could not parse the expression after the '(' token!");
 
-        if (position >= tokens.Count)
-        {
-            throw new ArgumentException("Expected ')' token, found end of input instead!");
-        }
-
-        if (tokens[position++] is not CloseParenthesisLeaf closeToken)
-        {
-            throw new ArgumentException("Expected ')' token!");
-        }
+        reader.Consume(out CloseParenthesisLeaf closeToken);
 
         ParenthesizedExpression parenthesizedExpr = new(openToken, exprNode, closeToken);
         parenthesizedExpr.UpdateRange();
         return parenthesizedExpr;
     }
 
-    private static SyntaxNode ParseIdentifierOrFunctionCall(IdentifierLeaf idToken, List<LeafNode> tokens, ref int position)
+    private static SyntaxNode ParseIdentifierOrFunctionCall(IdentifierLeaf idToken, TokenReader reader)
     {
-        position++;
+        reader.Advance(); // consume the identifier token
 
-        if (position >= tokens.Count || tokens[position] is not OpenParenthesisLeaf openParen)
+        if (reader.IsAtEnd || reader.CurrentToken is not OpenParenthesisLeaf openParen)
         {
             return idToken;
         }
 
-        position++; // consume openParen
-        return ParseFuncCallExpr(tokens, ref position, openParen, idToken);
+        reader.Advance(); // consume the '(' token
+        return ParseFuncCallExpr(reader, openParen, idToken);
     }
 
-    private static IntLiteralLeaf ParseIntLiteral(IntLiteralLeaf litToken, ref int position)
-    {
-        position++;
-        return litToken;
-    }
 
-    private static BoolLiteralLeaf ParseBoolLiteral(BoolLiteralLeaf boolToken, ref int position)
+    private static FunctionCallExpressionNode ParseFuncCallExpr(TokenReader reader, OpenParenthesisLeaf openParen, IdentifierLeaf idToken)
     {
-        position++;
-        return boolToken;
-    }
-
-    private static FunctionCallExpressionNode ParseFuncCallExpr(List<LeafNode> tokens, ref int position, OpenParenthesisLeaf openParen, IdentifierLeaf idToken)
-    {
-        ArgumentListNode argumentList = ParseArgumentList(tokens, ref position, openParen);
+        ArgumentListNode argumentList = ParseArgumentList(reader, openParen);
         return new FunctionCallExpressionNode(idToken, argumentList);
     }
-    private static ArgumentListNode ParseArgumentList(List<LeafNode> tokens, ref int position, OpenParenthesisLeaf openParen)
+    private static ArgumentListNode ParseArgumentList(TokenReader reader, OpenParenthesisLeaf openParen)
     {
-        if (tokens[position] is CloseParenthesisLeaf earlyCloseParen)
+        if (reader.CurrentToken is CloseParenthesisLeaf earlyCloseParen)
         {
-            position++;
+            reader.Advance(); // consume the ')' token
             return new ArgumentListNode(openParen, earlyCloseParen);
         }
 
         List<SyntaxNode> arguments = [];
         while (true)
         {
-            SyntaxNode arg = ParseExpression(tokens, ref position);
+            SyntaxNode arg = ParseExpression(reader);
             arguments.Add(arg);
 
-            if (tokens[position] is CommaLeaf commaToken)
+            if (reader.CurrentToken is CommaLeaf commaToken)
             {
-                position++;
+                reader.Advance(); // consume the ',' token
                 arguments.Add(commaToken);
             }
-            else if (tokens[position] is CloseParenthesisLeaf closeParen)
+            else if (reader.CurrentToken is CloseParenthesisLeaf closeParen)
             {
-                position++;
+                reader.Advance(); // consume the ')' token
                 return new ArgumentListNode(openParen, arguments, closeParen);
             }
             else
             {
-                throw new ArgumentException($"Expected ',' or ')' in argument list, not {tokens[position]}!");
+                throw new ArgumentException($"Expected ',' or ')' in argument list, not {reader.CurrentToken}!");
             }
         }
     }
 
 
-    private static FunctionDefinitionNode ParseFunctionDefinition(List<LeafNode> tokens, ref int position)
+    private static FunctionDefinitionNode ParseFunctionDefinition(TokenReader reader)
     {
-        if (tokens[position] is not FunctionKeywordLeaf funcKeywordLeaf)
-        {
-            throw new ArgumentException($"Expected 'function' keyword at start of function definition, not {tokens[position]}!");
-        }
+        reader.Consume(out FunctionKeywordLeaf funcKeywordLeaf);
+        reader.Consume(out IdentifierLeaf idToken);
+        ParameterListNode parameterList = ParseParameterList(reader);
 
-        position++;
-        if (tokens[position] is not IdentifierLeaf idToken)
+        if (reader.CurrentToken is not SmallArrowLeaf arrowToken)
         {
-            throw new ArgumentException($"Expected an identifier as function name, not {tokens[position]}!");
-        }
-
-        position++;
-        ParameterListNode parameterList = ParseParameterList(tokens, ref position);
-
-        if (tokens[position] is not SmallArrowLeaf arrowToken)
-        {
-            if (tokens[position] is not OpenBraceLeaf)
+            if (reader.CurrentToken is not OpenBraceLeaf)
             {
-                throw new ArgumentException($"Expected '->' or '{{' token after function parameters, not {tokens[position]}!");
+                throw new ArgumentException($"Expected '->' or '{{' token after function parameters, not {reader.CurrentToken}!");
             }
 
-            FunctionBlockNode voidReturningBody = ParseFunctionBlock(tokens, ref position);
+            FunctionBlockNode voidReturningBody = ParseFunctionBlock(reader);
+            LeafNode currentToken = reader.CurrentToken;
             return new FunctionDefinitionNode(
                 funcKeywordLeaf,
                 idToken,
                 parameterList,
-                new ImplicitSmallArrowLeaf(tokens[position].StartLine, tokens[position].StartChar),
-                new ImplicitVoidLeaf(tokens[position].StartLine, tokens[position].StartChar),
+                new ImplicitSmallArrowLeaf(currentToken.StartLine, currentToken.StartChar),
+                new ImplicitVoidLeaf(currentToken.StartLine, currentToken.StartChar),
                 voidReturningBody);
         }
-        position++;
+        reader.Advance(); // consume the '->' token
 
-        if (tokens[position] is VoidLeaf voidLeaf)
+        if (reader.CurrentToken is VoidLeaf)
         {
-            position++;
-            FunctionBlockNode body = ParseFunctionBlock(tokens, ref position);
+            reader.Consume(out VoidLeaf voidLeaf);
+            FunctionBlockNode body = ParseFunctionBlock(reader);
             return new FunctionDefinitionNode(funcKeywordLeaf, idToken, parameterList, arrowToken, voidLeaf, body);
         }
         else
         {
-            TypeLeafNode returnType = ParseType(tokens, ref position);
-            FunctionBlockNode body = ParseFunctionBlock(tokens, ref position);
+            TypeLeafNode returnType = ParseType(reader);
+            FunctionBlockNode body = ParseFunctionBlock(reader);
             return new FunctionDefinitionNode(funcKeywordLeaf, idToken, parameterList, arrowToken, returnType, body);
         }
     }
-    private static ParameterListNode ParseParameterList(List<LeafNode> tokens, ref int position)
+    private static ParameterListNode ParseParameterList(TokenReader reader)
     {
-        if (tokens[position] is not OpenParenthesisLeaf openParenToken)
-        {
-            throw new ArgumentException($"Expected '(' token, not {tokens[position]}!");
-        }
+        reader.Consume(out OpenParenthesisLeaf openParenToken);
 
-        position++;
-
-        if (tokens[position] is CloseParenthesisLeaf earlyCloseParenToken)
+        if (reader.CurrentToken is CloseParenthesisLeaf earlyCloseParenToken)
         {
-            position++;
+            reader.Advance(); // consume the ')' token
             return new ParameterListNode(openParenToken, earlyCloseParenToken);
         }
 
@@ -367,232 +358,185 @@ public class RecursiveDescentParser : IParser
         CloseParenthesisLeaf closeParenToken;
         while (true)
         {
-            if (tokens[position] is IdentifierLeaf)
+            if (reader.CurrentToken is IdentifierLeaf)
             {
-                VariableNameTypeNode nameType = ParseVariableNameType(tokens, ref position);
+                VariableNameTypeNode nameType = ParseVariableNameType(reader);
                 parameters.Add(nameType);
             }
 
-            if (tokens[position] is CommaLeaf comma)
+            if (reader.CurrentToken is CommaLeaf comma)
             {
-                position++;
+                reader.Advance(); // consume the ',' token
                 parameters.Add(comma);
             }
-            else if (tokens[position] is CloseParenthesisLeaf closeParen)
+            else if (reader.CurrentToken is CloseParenthesisLeaf closeParenCandidate)
             {
-                closeParenToken = closeParen;
-                position++;
+                closeParenToken = closeParenCandidate;
+                reader.Advance(); // consume the ')' token
                 break;
             }
             else
             {
-                throw new ArgumentException($"Expected ',' or ')' in parameter list, not {tokens[position]}!");
+                throw new ArgumentException($"Expected ',' or ')' in parameter list, not {reader.CurrentToken}!");
             }
         }
         return new ParameterListNode(openParenToken, parameters, closeParenToken);
     }
 
-    private static WhileStatementNode ParseWhileStatement(List<LeafNode> tokens, ref int position)
+    private static WhileStatementNode ParseWhileStatement(TokenReader reader)
     {
-        if (tokens[position] is not WhileKeywordLeaf whileKeywordLeaf)
-        {
-            throw new ArgumentException($"Expected 'while' keyword at start of while loop, not {tokens[position]}!");
-        }
-
-        position++;
-        SyntaxNode condition = ParseExpression(tokens, ref position);
-
-        FunctionBlockNode body = ParseFunctionBlock(tokens, ref position);
+        reader.Consume(out WhileKeywordLeaf whileKeywordLeaf);
+        SyntaxNode condition = ParseExpression(reader);
+        FunctionBlockNode body = ParseFunctionBlock(reader);
 
         return new WhileStatementNode(whileKeywordLeaf, condition, body);
     }
 
-    private static NamespaceDefinitionNode ParseNamespaceDefinition(List<LeafNode> tokens, ref int position)
+    private static NamespaceDefinitionNode ParseNamespaceDefinition(TokenReader reader)
     {
-        if (tokens[position] is not NamespaceKeywordLeaf namespaceKeywordLeaf)
-        {
-            throw new ArgumentException($"Expected 'namespace' keyword at start of namespace definition, not {tokens[position]}!");
-        }
-
-        position++;
-        QualifiedNameNode qualifiedName = ParseQualifiedName(tokens, ref position);
-
-        NonLocalBlockNode block = ParseHighLevelBlock(tokens, ref position);
+        reader.Consume(out NamespaceKeywordLeaf namespaceKeywordLeaf);
+        QualifiedNameNode qualifiedName = ParseQualifiedName(reader);
+        NonLocalBlockNode block = ParseHighLevelBlock(reader);
 
         return new NamespaceDefinitionNode(namespaceKeywordLeaf, qualifiedName, block);
     }
-    private static QualifiedNameNode ParseQualifiedName(List<LeafNode> tokens, ref int position)
+    private static QualifiedNameNode ParseQualifiedName(TokenReader reader)
     {
-        if (tokens[position] is not IdentifierLeaf startIdLeaf)
-        {
-            throw new ArgumentException($"Expected an identifier at start of qualified name, not {tokens[position]}!");
-        }
-
+        reader.Consume(out IdentifierLeaf startIdLeaf);
         List<SyntaxNode> nameParts = [startIdLeaf];
-        position++;
 
         // contains ids and dots
-        while (tokens[position] is IdentifierLeaf or DotLeaf)
+        while (!reader.IsAtEnd && reader.CurrentToken is IdentifierLeaf or DotLeaf)
         {
-            nameParts.Add(tokens[position]);
-            position++;
+            nameParts.Add(reader.Consume<LeafNode>());
         }
         return new QualifiedNameNode(nameParts);
     }
 
-    private static FunctionBlockNode ParseFunctionBlock(List<LeafNode> tokens, ref int position)
+    private static FunctionBlockNode ParseFunctionBlock(TokenReader reader)
+        => ParseBlock(reader, (open, statements, close) => new FunctionBlockNode(open, statements, close));
+    private static LocalBlockNode ParseLocalBlock(TokenReader reader)
+        => ParseBlock(reader, (open, statements, close) => new LocalBlockNode(open, statements, close));
+
+    private static T ParseBlock<T>(
+            TokenReader reader,
+            Func<OpenBraceLeaf, List<SyntaxNode>, CloseBraceLeaf, T> factory)
+        where T : BlockNode
     {
-        if (tokens[position] is not OpenBraceLeaf openBraceToken)
-        {
-            throw new ArgumentException($"Expected '{{' token at start of block, not {tokens[position]}!");
-        }
+        reader.Consume(out OpenBraceLeaf openBraceToken);
+        (List<SyntaxNode> statements, CloseBraceLeaf closeBraceLeaf) = ParseStatementsInBlock(reader);
 
-        position++;
-        (List<SyntaxNode>? statements, CloseBraceLeaf? closeBraceLeaf) = ParseStatementsInBlock(tokens, ref position);
-
-        return new FunctionBlockNode(openBraceToken, statements, closeBraceLeaf);
-    }
-    private static LocalBlockNode ParseLocalBlock(List<LeafNode> tokens, ref int position)
-    {
-        if (tokens[position] is not OpenBraceLeaf openBraceToken)
-        {
-            throw new ArgumentException($"Expected '{{' token at start of block, not {tokens[position]}!");
-        }
-
-        position++;
-        (List<SyntaxNode>? statements, CloseBraceLeaf? closeBraceLeaf) = ParseStatementsInBlock(tokens, ref position);
-
-        return new LocalBlockNode(openBraceToken, statements, closeBraceLeaf);
+        return factory.Invoke(openBraceToken, statements, closeBraceLeaf);
     }
 
-    private static (List<SyntaxNode> statements, CloseBraceLeaf closeBrace) ParseStatementsInBlock(List<LeafNode> tokens, ref int position)
+    private static (List<SyntaxNode> statements, CloseBraceLeaf closeBrace) ParseStatementsInBlock(TokenReader reader)
     {
         List<SyntaxNode> statements = [];
 
         CloseBraceLeaf closeBraceLeaf;
         while (true)
         {
-            if (tokens[position] is LetKeywordLeaf)
+            if (reader.CurrentToken is LetKeywordLeaf)
             {
-                statements.Add(ParseVariableDefinition(tokens, ref position));
+                statements.Add(ParseVariableDefinition(reader));
             }
-            else if (tokens[position] is WhileKeywordLeaf)
+            else if (reader.CurrentToken is WhileKeywordLeaf)
             {
-                statements.Add(ParseWhileStatement(tokens, ref position));
+                statements.Add(ParseWhileStatement(reader));
             }
-            else if (tokens[position] is IdentifierLeaf identifier)
+            else if (reader.CurrentToken is IdentifierLeaf identifier)
             {
-                position++;
-                if (tokens[position] is OpenParenthesisLeaf openParen)
+                reader.Advance(); // consume the identifier token
+                if (reader.CurrentToken is OpenParenthesisLeaf openParen)
                 {
-                    position++;
-                    FunctionCallExpressionNode funcCallExpr = ParseFuncCallExpr(tokens, ref position, openParen, identifier);
+                    reader.Advance(); // consume the '(' token
+                    FunctionCallExpressionNode funcCallExpr = ParseFuncCallExpr(reader, openParen, identifier);
 
-                    if (tokens[position] is not SemicolonLeaf semicolon)
-                    {
-                        throw new ArgumentException($"Unexpected token after function call statement: {tokens[position]}!");
-                    }
-
-                    position++;
+                    reader.Consume(out SemicolonLeaf semicolon, $"Expected ';' token after a function call, not {reader.CurrentToken}!");
+                    
                     statements.Add(new FunctionCallStatementNode(funcCallExpr, semicolon));
                 }
-                else if (tokens[position] is AssignmentOperatorLeaf assignmentOp)
+                else if (reader.CurrentToken is AssignmentOperatorLeaf assignmentOp)
                 {
-                    position++;
-                    SyntaxNode assignedValue = ParseExpression(tokens, ref position);
+                    reader.Advance(); // consume the assignment operator token
+                    SyntaxNode assignedValue = ParseExpression(reader);
 
-                    if (tokens[position] is not SemicolonLeaf semicolon)
-                    {
-                        throw new ArgumentException($"Expected ';' token at the end of assignment statement, not {tokens[position]}!");
-                    }
-
-                    position++;
+                    reader.Consume(out SemicolonLeaf semicolon, $"Expected ';' token at the end of assignment statement, not {reader.CurrentToken}!");
+                    
                     statements.Add(new AssignmentStatementNode(identifier, assignmentOp, assignedValue, semicolon));
                 }
                 else
                 {
-                    throw new ArgumentException($"Unexpected token after identifier in statement: {tokens[position]}!");
+                    throw new ArgumentException($"Unexpected token after identifier in statement: {reader.CurrentToken}!");
                 }
             }
-            else if (tokens[position] is ReturnKeywordLeaf returnKeyword)
+            else if (reader.CurrentToken is ReturnKeywordLeaf returnKeyword)
             {
-                position++;
-                if (tokens[position] is SemicolonLeaf earlySemicolon)
+                reader.Advance(); // consume the 'return' token
+                if (reader.CurrentToken is SemicolonLeaf earlySemicolon)
                 {
-                    position++;
+                    reader.Advance(); // consume the ';' token
                     statements.Add(new ReturnStatementNode(returnKeyword, earlySemicolon));
                     continue;
                 }
 
-                SyntaxNode returnValue = ParseExpression(tokens, ref position);
+                SyntaxNode returnValue = ParseExpression(reader);
 
-                if (tokens[position] is not SemicolonLeaf semicolonLeaf)
-                {
-                    throw new ArgumentException($"Expected ';' token at the end of return statement, not {tokens[position]}!");
-                }
+                reader.Consume(out SemicolonLeaf semicolonLeaf, $"Expected ';' token at the end of return statement, not {reader.CurrentToken}!");
 
-                position++;
                 statements.Add(new ReturnStatementNode(returnKeyword, returnValue, semicolonLeaf));
             }
-            else if (tokens[position] is OpenBraceLeaf)
+            else if (reader.CurrentToken is OpenBraceLeaf)
             {
-                statements.Add(ParseLocalBlock(tokens, ref position));
+                statements.Add(ParseLocalBlock(reader));
             }
-            else if (tokens[position] is SemicolonLeaf semicolon)
+            else if (reader.CurrentToken is SemicolonLeaf semicolon)
             {
-                position++;
+                reader.Consume<SemicolonLeaf>();
                 statements.Add(new EmptyStatementNode(semicolon));
             }
-            else if (tokens[position] is CloseBraceLeaf leaf)
+            else if (reader.CurrentToken is CloseBraceLeaf leaf)
             {
-                position++;
+                reader.Consume<CloseBraceLeaf>();
                 closeBraceLeaf = leaf;
                 break;
             }
             else
             {
-                throw new ArgumentException($"Unexpected token in block: {tokens[position]}!");
+                throw new ArgumentException($"Unexpected token in block: {reader.CurrentToken}!");
             }
         }
         return (statements, closeBraceLeaf);
     }
 
-    private static NonLocalBlockNode ParseHighLevelBlock(List<LeafNode> tokens, ref int position)
+    private static NonLocalBlockNode ParseHighLevelBlock(TokenReader reader)
     {
-        if (tokens[position] is not OpenBraceLeaf openBraceToken)
-        {
-            throw new ArgumentException($"Expected '{{' token at start of block, not {tokens[position]}!");
-        }
-
-        position++;
+        reader.Consume(out OpenBraceLeaf openBraceToken);
         List<SyntaxNode> statements = [];
 
-        CloseBraceLeaf closeBraceLeaf;
         while (true)
         {
-            if (tokens[position] is FunctionKeywordLeaf)
+            if (reader.CurrentToken is FunctionKeywordLeaf)
             {
-                statements.Add(ParseFunctionDefinition(tokens, ref position));
+                statements.Add(ParseFunctionDefinition(reader));
             }
-            else if (tokens[position] is NamespaceKeywordLeaf)
+            else if (reader.CurrentToken is NamespaceKeywordLeaf)
             {
-                statements.Add(ParseNamespaceDefinition(tokens, ref position));
+                statements.Add(ParseNamespaceDefinition(reader));
             }
-            else if (tokens[position] is LetKeywordLeaf)
+            else if (reader.CurrentToken is LetKeywordLeaf)
             {
-                statements.Add(ParseVariableDefinition(tokens, ref position));
+                statements.Add(ParseVariableDefinition(reader));
             }
-            else if (tokens[position] is CloseBraceLeaf leaf)
+            else if (reader.CurrentToken is CloseBraceLeaf)
             {
-                position++;
-                closeBraceLeaf = leaf;
-                break;
+                reader.Consume(out CloseBraceLeaf closeBraceLeaf);
+                return new NonLocalBlockNode(openBraceToken, statements, closeBraceLeaf);
             }
             else
             {
-                throw new ArgumentException($"Unexpected token in block: {tokens[position]}!");
+                throw new ArgumentException($"Unexpected token in block: {reader.CurrentToken}!");
             }
         }
-        return new NonLocalBlockNode(openBraceToken, statements, closeBraceLeaf);
     }
 }
