@@ -4,7 +4,7 @@ namespace Program.ExtendedName
     {
         let two: i32 = 2;
         debugPrint(two);
-        let num: i32 = (two + 2 - 1 - 1) / 1234567 * 1 + 1;
+        let num: i32 = ((two + 2 - 1 - 1) / 1234567 * 1 + 1) % 9876;
         debugPrint(num);
 
         let _true: bool = true;
