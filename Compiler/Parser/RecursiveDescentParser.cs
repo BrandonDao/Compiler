@@ -82,10 +82,11 @@ namespace Compiler.Parser
                 throw new ArgumentException($"Expected '=' token after variable name and type, not {tokens[position]}!");
 
             position++;
-            var valueExpr = ParseValueExpression(tokens, ref position);
+            var valueExpr = ParseExpression(tokens, ref position);
 
             if (tokens[position] is not SemicolonLeaf semicolonLeaf)
                 throw new ArgumentException($"Expected ';' token at the end of variable definition, not {tokens[position]}!");
+
             position++;
 
             return new VariableDefinitionNode(letKeywordLeaf, varNameTypeNode, assignmentOpLeaf, valueExpr, semicolonLeaf);
@@ -109,146 +110,126 @@ namespace Compiler.Parser
             return new VariableNameTypeNode(idToken, colonToken, typeNode);
         }
 
-        private static SyntaxNode ParseValueExpression(List<LeafNode> tokens, ref int position)
+        private static SyntaxNode ParseExpression(List<LeafNode> tokens, ref int position)
+            => ParseExpression(tokens, ref position, minPrecedence: 0);
+        private static SyntaxNode ParseExpression(List<LeafNode> tokens, ref int position, int minPrecedence)
         {
-            var highExpr = ParseHighValueExpr(ref position);
-            var rest = ParseLowValueExprRest(ref position);
-            if (rest is EpsilonNode) return highExpr;
+            SyntaxNode expr = ParsePrimary(tokens, ref position);
 
-            rest.Children[0] = highExpr;
-
-            return FixAssociativity(rest);
-
-            SyntaxNode ParseHighValueExpr(ref int position)
+            // look ahead one to check for operator + precedence
+            while (position < tokens.Count && TryGetOperatorPrecedence(tokens[position], out int opPrecedence))
             {
-                var lhs = ParseValueTerm(ref position);
-                var rest = ParseHighValueExprRest(ref position);
-                if (rest is EpsilonNode) return lhs;
+                // led = left/infix denotation parsing (terminology from Pratt parsing)
+                LeafNode opToken = tokens[position];
+                bool isLeftAssociative = IsLeftAssociative(opToken);
 
-                rest.Children[0] = lhs;
+                if (opPrecedence < minPrecedence) break;
 
-                return FixAssociativity(rest);
+                position++;
 
-                SyntaxNode ParseHighValueExprRest(ref int position)
-                {
-                    if (position >= tokens.Count) return EpsilonNode.Instance;
+                SyntaxNode rhs = ParseExpression(
+                    tokens,
+                    ref position,
+                    isLeftAssociative ? opPrecedence + 1 : opPrecedence); // +1 to enforce leftward grouping for same-precedence ops
 
-                    var op = ParseHighOp(ref position);
-                    if (op is null) return EpsilonNode.Instance;
-
-                    var rhs = ParseHighValueExpr(ref position)
-                        ?? throw new ArgumentException($"Could not parse the expression after the operator {op.Children[1]}!");
-
-                    op.Children[^1] = rhs;
-                    return op;
-
-                    SyntaxNode? ParseHighOp(ref int position)
-                    {
-                        if (tokens[position] is MultiplyOperatorLeaf) return new MultiplyOperationNode(children: [null, tokens[position++], null]);
-                        else if (tokens[position] is DivideOperatorLeaf) return new DivideOperationNode(children: [null, tokens[position++], null]);
-                        else return null;
-                    }
-                }
+                expr = CreateBinaryOp(opToken, expr, rhs);
             }
-            SyntaxNode ParseLowValueExprRest(ref int position)
+            return expr;
+
+            // Helpers
+            static bool TryGetOperatorPrecedence(LeafNode token, out int precedence)
             {
-                if (position >= tokens.Count) return EpsilonNode.Instance;
-
-                int start = position;
-
-                var op = ParseLowOp(ref position);
-                if (op is null) return EpsilonNode.Instance;
-
-                var rhs = ParseValueExpression(tokens, ref position);
-                if (rhs is null)
+                precedence = token switch
                 {
-                    position = start;
-                    return EpsilonNode.Instance;
-                }
+                    OrOperatorLeaf => 10,
+                    AndOperatorLeaf => 20,
+                    EqualityOperatorLeaf => 30,
 
-                op.Children[^1] = rhs;
+                    AddOperatorLeaf
+                    or NegateOperatorLeaf
+                    => 40,
 
-                return op;
+                    MultiplyOperatorLeaf
+                    or DivideOperatorLeaf
+                    or ModOperatorLeaf
+                    => 50,
 
-                SyntaxNode? ParseLowOp(ref int position)
-                {
-                    if (tokens[position] is AddOperatorLeaf) return new AddOperationNode(children: [null, tokens[position++], null]);
-                    else if (tokens[position] is NegateOperatorLeaf) return new SubtractOperationNode(children: [null, tokens[position++], null]);
-                    else if (tokens[position] is OrOperatorLeaf) return new OrOperationNode(children: [null, tokens[position++], null]);
-                    else if (tokens[position] is AndOperatorLeaf) return new AndOperationNode(children: [null, tokens[position++], null]);
-                    else if (tokens[position] is EqualityOperatorLeaf) return new EqualityOperationNode(children: [null, tokens[position++], null]);
-                    else return null;
-                }
+                    _ => -1
+                };
+                return precedence != -1;
             }
-            SyntaxNode ParseValueTerm(ref int position)
+            static bool IsLeftAssociative(LeafNode token) => token is not AssignmentOperatorLeaf;
+
+            static SyntaxNode CreateBinaryOp(LeafNode op, SyntaxNode lhs, SyntaxNode rhs)
             {
-                switch (tokens[position])
+                List<SyntaxNode> children = [lhs, op, rhs];
+                return op switch
                 {
-                    case NotOperatorLeaf notToken:
-                        {
-                            position++;
-                            var notValueNode = ParseValueTerm(ref position)
-                                ?? throw new ArgumentException("Could not parse the expression after the '!' token!");
-
-                            var notOpNode = new NotOperationNode([notToken, notValueNode]);
-                            notOpNode.UpdateRange();
-                            return notOpNode;
-                        }
-
-                    case OpenParenthesisLeaf openToken:
-                        {
-                            position++;
-                            var exprNode = ParseValueExpression(tokens, ref position)
-                                ?? throw new ArgumentException("Could not parse the expression after the '(' token!");
-
-                            if (tokens[position++] is not CloseParenthesisLeaf closeToken)
-                                throw new ArgumentException("Expected ')' token!");
-
-                            var parenthesizedExpr = new ParenthesizedExpression(openToken, exprNode, closeToken);
-                            parenthesizedExpr.UpdateRange();
-                            return parenthesizedExpr;
-                        }
-
-                    case IdentifierLeaf idToken:
-                        position++;
-
-                        if (tokens[position] is OpenParenthesisLeaf openParen)
-                        {
-                            position++;
-                            var funcCall = ParseFuncCallExpr(tokens, ref position, openParen, idToken);
-                            return funcCall;
-                        }
-                        return idToken;
-
-                    case IntLiteralLeaf litToken:
-                        position++;
-                        return litToken;
-
-                    case BoolLiteralLeaf strLitToken:
-                        position++;
-                        return strLitToken;
-
-                    default: throw new ArgumentException($"Could not parse Value Term, found {tokens[position]}!");
-                }
-            }
-            SyntaxNode FixAssociativity(SyntaxNode node)
-            {
-                if ((node is LowPrecedenceOperationNode && node.Children.Count > 1 && node.Children[2] is LowPrecedenceOperationNode)
-                || (node is HighPrecedenceOperationNode && node.Children.Count > 1 && node.Children[2] is HighPrecedenceOperationNode))
-                {
-                    var newRoot = node.Children[2];
-                    node.Children[2] = newRoot.Children[0];
-                    newRoot.Children[0] = node;
-                    node.UpdateRange();
-                    newRoot.UpdateRange();
-                    node = newRoot;
-
-                    node.Children[0] = FixAssociativity(node.Children[0]);
-                }
-                node.UpdateRange();
-                return node;
+                    AddOperatorLeaf => new AddOperationNode(children),
+                    NegateOperatorLeaf => new SubtractOperationNode(children),
+                    MultiplyOperatorLeaf => new MultiplyOperationNode(children),
+                    DivideOperatorLeaf => new DivideOperationNode(children),
+                    ModOperatorLeaf => new ModOperationNode(children),
+                    OrOperatorLeaf => new OrOperationNode(children),
+                    AndOperatorLeaf => new AndOperationNode(children),
+                    EqualityOperatorLeaf => new EqualityOperationNode(children),
+                    _ => throw new ArgumentException($"Unknown operator: {op}! This should never happen if {nameof(TryGetOperatorPrecedence)} is correct.")
+                };
             }
         }
+
+        // nud = null/prefix denotation parsing
+        private static SyntaxNode ParsePrimary(List<LeafNode> tokens, ref int position)
+        {
+            switch (tokens[position])
+            {
+                case NotOperatorLeaf notToken:
+                    {
+                        position++;
+                        SyntaxNode? notValueNode = ParseExpression(tokens, ref position, minPrecedence: int.MaxValue)
+                            ?? throw new ArgumentException("Could not parse the expression after the '!' token!");
+
+                        NotOperationNode notOpNode = new([notToken, notValueNode]);
+                        notOpNode.UpdateRange();
+                        return notOpNode;
+                    }
+
+                case OpenParenthesisLeaf openToken:
+                    {
+                        position++;
+                        SyntaxNode? exprNode = ParseExpression(tokens, ref position)
+                            ?? throw new ArgumentException("Could not parse the expression after the '(' token!");
+
+                        if(position >= tokens.Count) throw new ArgumentException("Expected ')' token, found end of input instead!");
+
+                        if (tokens[position++] is not CloseParenthesisLeaf closeToken)
+                            throw new ArgumentException("Expected ')' token!");
+
+                        ParenthesizedExpression parenthesizedExpr = new(openToken, exprNode, closeToken);
+                        parenthesizedExpr.UpdateRange();
+                        return parenthesizedExpr;
+                    }
+
+                case IdentifierLeaf idToken:
+                    position++;
+
+                    if (position >= tokens.Count || tokens[position] is not OpenParenthesisLeaf openParen) return idToken;
+
+                    position++; // consume openParen
+                    return ParseFuncCallExpr(tokens, ref position, openParen, idToken);
+
+                case IntLiteralLeaf litToken:
+                    position++;
+                    return litToken;
+
+                case BoolLiteralLeaf strLitToken:
+                    position++;
+                    return strLitToken;
+
+                default: throw new ArgumentException($"Could not parse Primary Term, found {tokens[position]}!");
+            }
+        }
+
         private static FunctionCallExpressionNode ParseFuncCallExpr(List<LeafNode> tokens, ref int position, OpenParenthesisLeaf openParen, IdentifierLeaf idToken)
         {
             var argumentList = ParseArgumentList(tokens, ref position, openParen);
@@ -265,7 +246,7 @@ namespace Compiler.Parser
             List<SyntaxNode> arguments = [];
             while (true)
             {
-                var arg = ParseValueExpression(tokens, ref position);
+                var arg = ParseExpression(tokens, ref position);
                 arguments.Add(arg);
 
                 if (tokens[position] is CommaLeaf commaToken)
@@ -347,6 +328,7 @@ namespace Compiler.Parser
                     var nameType = ParseVariableNameType(tokens, ref position);
                     parameters.Add(nameType);
                 }
+
                 if (tokens[position] is CommaLeaf comma)
                 {
                     position++;
@@ -369,7 +351,7 @@ namespace Compiler.Parser
                 throw new ArgumentException($"Expected 'while' keyword at start of while loop, not {tokens[position]}!");
 
             position++;
-            var condition = ParseValueExpression(tokens, ref position);
+            var condition = ParseExpression(tokens, ref position);
 
             var body = ParseFunctionBlock(tokens, ref position);
 
@@ -457,7 +439,7 @@ namespace Compiler.Parser
                     else if (tokens[position] is AssignmentOperatorLeaf assignmentOp)
                     {
                         position++;
-                        SyntaxNode assignedValue = ParseValueExpression(tokens, ref position);
+                        SyntaxNode assignedValue = ParseExpression(tokens, ref position);
 
                         if (tokens[position] is not SemicolonLeaf semicolon)
                             throw new ArgumentException($"Expected ';' token at the end of assignment statement, not {tokens[position]}!");
@@ -477,7 +459,7 @@ namespace Compiler.Parser
                         continue;
                     }
 
-                    SyntaxNode returnValue = ParseValueExpression(tokens, ref position);
+                    SyntaxNode returnValue = ParseExpression(tokens, ref position);
 
                     if (tokens[position] is not SemicolonLeaf semicolonLeaf)
                         throw new ArgumentException($"Expected ';' token at the end of return statement, not {tokens[position]}!");
