@@ -157,7 +157,7 @@ namespace CompilerLib
                 default: throw new NotImplementedException();
             }
         }
-        public string Emit(OpCode opCode, string funcName, string returnType, IEnumerable<string> parameters)
+        public static string Emit(OpCode opCode, string funcName, string returnType, IEnumerable<string> parameters)
             => opCode switch
             {
                 OpCode.call => $"call {returnType} Program::'{funcName}'({string.Join(", ", parameters)})",
@@ -182,7 +182,7 @@ namespace CompilerLib
                 {
                     statementInfos.Add((ilGen.Emit(OpCode.ldc_i4, intLiteral.Value), indentLevel));
                 }
-                else if(literal is BoolLiteralLeaf boolLiteral)
+                else if (literal is BoolLiteralLeaf boolLiteral)
                 {
                     statementInfos.Add((ilGen.Emit(OpCode.ldc_i4, boolLiteral.Value == LanguageNames.Literals.True ? 1 : 0), indentLevel));
                 }
@@ -192,7 +192,7 @@ namespace CompilerLib
             {
                 if (funcCallExpr.FunctionInfo == null)
                 {
-                    if(funcCallExpr.Identifier.Value == "debugPrint")
+                    if (funcCallExpr.Identifier.Value == "debugPrint")
                     {
                         Console.WriteLine("DebugPrint function called! This is hardcoded for debugging purposes.");
 
@@ -219,7 +219,7 @@ namespace CompilerLib
                 {
                     ResolveOperand(ilGen, symbolTable, scopeID, statementInfos, indentLevel, localIdToIndex, argument);
                 }
-                statementInfos.Add((ilGen.Emit(OpCode.call, funcCallExpr.FunctionInfo.Name, funcCallExpr.FunctionInfo.SignatureInfo.Type, parameterTypes), indentLevel));
+                statementInfos.Add((Emit(OpCode.call, funcCallExpr.FunctionInfo.Name, funcCallExpr.FunctionInfo.SignatureInfo.Type, parameterTypes), indentLevel));
             }
             else throw new NotImplementedException($"Unsupported operand type: {operand.GetType().Name}");
         }
