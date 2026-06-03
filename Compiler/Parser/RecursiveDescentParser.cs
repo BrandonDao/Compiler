@@ -61,6 +61,8 @@ public class RecursiveDescentParser : IParser
 
 
     private static TypeLeafNode ParseType(ITokenStream tokens)
+        => ParseType(tokens, $"Expected an identifier or primitive type, not {tokens.Peek()}!");
+    private static TypeLeafNode ParseType(ITokenStream tokens, string customFailureMessage)
         => tokens.Peek() switch
         {
             IdentifierLeaf => tokens.Consume<IdentifierLeaf>(),
@@ -69,9 +71,8 @@ public class RecursiveDescentParser : IParser
             Int32Leaf => tokens.Consume<Int32Leaf>(),
             Int64Leaf => tokens.Consume<Int64Leaf>(),
             BoolLeaf => tokens.Consume<BoolLeaf>(),
-            _ => throw new ArgumentException($"Expected an identifier or primitive type, not {tokens.Peek()}!")
+            _ => throw new ArgumentException(customFailureMessage)
         };
-
 
     private static VariableDefinitionNode ParseVariableDefinition(ITokenStream tokens)
     {
@@ -88,8 +89,7 @@ public class RecursiveDescentParser : IParser
     {
         tokens.Consume(out IdentifierLeaf idToken);
         tokens.Consume(out ColonLeaf colonToken);
-        TypeLeafNode typeNode = ParseType(tokens)
-            ?? throw new ArgumentException($"Expected a type after ':' token, not {tokens.Peek()}!");
+        TypeLeafNode typeNode = ParseType(tokens, $"Expected a type after ':' token, not {tokens.Peek()}!");
 
         return new VariableNameTypeNode(idToken, colonToken, typeNode);
     }
@@ -166,15 +166,16 @@ public class RecursiveDescentParser : IParser
     }
 
     // nud = null/prefix denotation parsing
-    private static SyntaxNode ParsePrefix(ITokenStream tokens) => tokens.Peek() switch
-    {
-        NotOperatorLeaf notToken => ParseNotOperator(notToken, tokens),
-        OpenParenthesisLeaf openToken => ParseParenthesizedExpression(openToken, tokens),
-        IdentifierLeaf idToken => ParseIdentifierOrFunctionCall(idToken, tokens),
-        IntLiteralLeaf intLiteralLeaf => ParseIntLiteral(intLiteralLeaf, tokens),
-        BoolLiteralLeaf boolLiteralLeaf => ParseBoolLiteral(boolLiteralLeaf, tokens),
-        _ => throw new ArgumentException($"Could not parse Primary Term, found {tokens.Peek()}!")
-    };
+    private static SyntaxNode ParsePrefix(ITokenStream tokens)
+        => tokens.Peek() switch
+        {
+            NotOperatorLeaf notToken => ParseNotOperator(notToken, tokens),
+            OpenParenthesisLeaf openToken => ParseParenthesizedExpression(openToken, tokens),
+            IdentifierLeaf idToken => ParseIdentifierOrFunctionCall(idToken, tokens),
+            IntLiteralLeaf intLiteralLeaf => ParseIntLiteral(intLiteralLeaf, tokens),
+            BoolLiteralLeaf boolLiteralLeaf => ParseBoolLiteral(boolLiteralLeaf, tokens),
+            _ => throw new ArgumentException($"Could not parse Primary Term, found {tokens.Peek()}!")
+        };
 
     private static IntLiteralLeaf ParseIntLiteral(IntLiteralLeaf intLiteralLeaf, ITokenStream tokens)
     {
@@ -190,8 +191,7 @@ public class RecursiveDescentParser : IParser
     private static NotOperationNode ParseNotOperator(NotOperatorLeaf notToken, ITokenStream tokens)
     {
         tokens.Advance(); // consume the '!' token
-        SyntaxNode? notValueNode = ParseExpression(tokens, minPrecedence: int.MaxValue)
-            ?? throw new ArgumentException("Could not parse the expression after the '!' token!");
+        SyntaxNode notValueNode = ParseExpression(tokens, minPrecedence: int.MaxValue);
 
         NotOperationNode notOpNode = new([notToken, notValueNode]);
         notOpNode.UpdateRange();
@@ -201,8 +201,7 @@ public class RecursiveDescentParser : IParser
     private static ParenthesizedExpression ParseParenthesizedExpression(OpenParenthesisLeaf openToken, ITokenStream tokens)
     {
         tokens.Advance(); // consume the '(' token
-        SyntaxNode? exprNode = ParseExpression(tokens)
-            ?? throw new ArgumentException("Could not parse the expression after the '(' token!");
+        SyntaxNode exprNode = ParseExpression(tokens);
 
         tokens.Consume(out CloseParenthesisLeaf closeToken);
 
@@ -270,13 +269,10 @@ public class RecursiveDescentParser : IParser
 
         if (tokens.Peek() is not SmallArrowLeaf arrowToken)
         {
-            if (tokens.Peek() is not OpenBraceLeaf)
-            {
-                throw new ArgumentException($"Expected '->' or '{{' token after function parameters, not {tokens.Peek()}!");
-            }
+            tokens.Consume(out OpenBraceLeaf openBraceToken, $"Expected '->' or '{{' token after function parameters, not {tokens.Peek()}!");
 
-            FunctionBlockNode voidReturningBody = ParseFunctionBlock(tokens);
-            LeafNode currentToken = tokens.Peek();
+            FunctionBlockNode voidReturningBody = ParseFunctionBlock(tokens, openBraceToken);
+            LeafNode currentToken = tokens.Peek(); // Used only for start/end line/char information
             return new FunctionDefinitionNode(
                 funcKeywordLeaf,
                 idToken,
@@ -290,13 +286,19 @@ public class RecursiveDescentParser : IParser
         if (tokens.Peek() is VoidLeaf)
         {
             tokens.Consume(out VoidLeaf voidLeaf);
-            FunctionBlockNode body = ParseFunctionBlock(tokens);
+
+            tokens.Consume(out OpenBraceLeaf openBraceToken, $"Expected '{{' token after 'void' return type, not {tokens.Peek()}!");
+
+            FunctionBlockNode body = ParseFunctionBlock(tokens, openBraceToken);
             return new FunctionDefinitionNode(funcKeywordLeaf, idToken, parameterList, arrowToken, voidLeaf, body);
         }
         else
         {
             TypeLeafNode returnType = ParseType(tokens);
-            FunctionBlockNode body = ParseFunctionBlock(tokens);
+
+            tokens.Consume(out OpenBraceLeaf openBraceToken, $"Expected '{{' token after function '{returnType}' return type, not {tokens.Peek()}!");
+
+            FunctionBlockNode body = ParseFunctionBlock(tokens, openBraceToken);
             return new FunctionDefinitionNode(funcKeywordLeaf, idToken, parameterList, arrowToken, returnType, body);
         }
     }
@@ -344,7 +346,8 @@ public class RecursiveDescentParser : IParser
     {
         tokens.Consume(out WhileKeywordLeaf whileKeywordLeaf);
         SyntaxNode condition = ParseExpression(tokens);
-        FunctionBlockNode body = ParseFunctionBlock(tokens);
+        tokens.Consume(out OpenBraceLeaf openBraceToken, $"Expected '{{' token after while loop condition, not {tokens.Peek()}!");
+        FunctionBlockNode body = ParseFunctionBlock(tokens, openBraceToken);
 
         return new WhileStatementNode(whileKeywordLeaf, condition, body);
     }
@@ -370,17 +373,17 @@ public class RecursiveDescentParser : IParser
         return new QualifiedNameNode(nameParts);
     }
 
-    private static FunctionBlockNode ParseFunctionBlock(ITokenStream tokens)
-        => ParseBlock(tokens, (open, statements, close) => new FunctionBlockNode(open, statements, close));
-    private static LocalBlockNode ParseLocalBlock(ITokenStream tokens)
-        => ParseBlock(tokens, (open, statements, close) => new LocalBlockNode(open, statements, close));
+    private static FunctionBlockNode ParseFunctionBlock(ITokenStream tokens, OpenBraceLeaf openBraceToken)
+        => ParseBlock(tokens, openBraceToken, (open, statements, close) => new FunctionBlockNode(open, statements, close));
+    private static LocalBlockNode ParseLocalBlock(ITokenStream tokens, OpenBraceLeaf openBraceToken)
+        => ParseBlock(tokens, openBraceToken, (open, statements, close) => new LocalBlockNode(open, statements, close));
 
     private static T ParseBlock<T>(
             ITokenStream tokens,
+            OpenBraceLeaf openBraceToken,
             Func<OpenBraceLeaf, List<SyntaxNode>, CloseBraceLeaf, T> factory)
         where T : BlockNode
     {
-        tokens.Consume(out OpenBraceLeaf openBraceToken);
         (List<SyntaxNode> statements, CloseBraceLeaf closeBraceLeaf) = ParseStatementsInBlock(tokens);
 
         return factory.Invoke(openBraceToken, statements, closeBraceLeaf);
@@ -443,18 +446,19 @@ public class RecursiveDescentParser : IParser
 
                 statements.Add(new ReturnStatementNode(returnKeyword, returnValue, semicolonLeaf));
             }
-            else if (tokens.Peek() is OpenBraceLeaf)
+            else if (tokens.Peek() is OpenBraceLeaf openBraceToken)
             {
-                statements.Add(ParseLocalBlock(tokens));
+                tokens.Advance(); // consume the '{' token
+                statements.Add(ParseLocalBlock(tokens, openBraceToken));
             }
             else if (tokens.Peek() is SemicolonLeaf semicolon)
             {
-                tokens.Consume<SemicolonLeaf>();
+                tokens.Advance(); // consume the ';' token
                 statements.Add(new EmptyStatementNode(semicolon));
             }
             else if (tokens.Peek() is CloseBraceLeaf leaf)
             {
-                tokens.Consume<CloseBraceLeaf>();
+                tokens.Advance(); // consume the '}' token
                 closeBraceLeaf = leaf;
                 break;
             }
