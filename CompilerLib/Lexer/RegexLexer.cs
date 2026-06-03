@@ -1,17 +1,14 @@
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Reflection;
-using CompilerLib;
-using CompilerLib.Lexer;
 using CompilerLib.Nodes;
 using CompilerLib.Nodes.Operators;
 using CompilerLib.Nodes.Punctuation;
 using CompilerLib.Nodes.Statements.Controls;
 using CompilerLib.Nodes.Scopes;
 using CompilerLib.Nodes.Types;
-using Compiler.Parser;
 
-namespace Compiler.Lexer;
+namespace CompilerLib.Lexer;
 
 public class RegexLexer : ILexer
 {

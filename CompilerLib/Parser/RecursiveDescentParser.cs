@@ -1,4 +1,3 @@
-using CompilerLib.Lexer;
 using CompilerLib.Nodes;
 using CompilerLib.Nodes.Functions;
 using CompilerLib.Nodes.Operators;
@@ -7,9 +6,8 @@ using CompilerLib.Nodes.Scopes;
 using CompilerLib.Nodes.Statements;
 using CompilerLib.Nodes.Statements.Controls;
 using CompilerLib.Nodes.Types;
-using CompilerLib.Parser;
 
-namespace Compiler.Parser;
+namespace CompilerLib.Parser;
 
 public class RecursiveDescentParser : IParser
 {

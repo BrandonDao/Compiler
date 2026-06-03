@@ -7,9 +7,9 @@ using CompilerLib.Nodes.Scopes;
 using CompilerLib.Nodes.Statements;
 using CompilerLib.Nodes.Statements.Controls;
 using CompilerLib.Nodes.Types;
-using static CompilerLib.SymbolTable;
+using static CompilerLib.SemanticAnalysis.SymbolTable;
 
-namespace Compiler.SemanticAnalysis;
+namespace CompilerLib.SemanticAnalysis;
 
 public class SemanticAnalyzer
 {

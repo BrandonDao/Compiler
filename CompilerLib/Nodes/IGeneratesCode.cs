@@ -1,4 +1,6 @@
 using System.Text;
+using CompilerLib.CodeGen;
+using CompilerLib.SemanticAnalysis;
 
 namespace CompilerLib.Nodes;
 

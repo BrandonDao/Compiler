@@ -1,7 +1,9 @@
 using System.Text;
+using CompilerLib.CodeGen;
 using CompilerLib.Nodes.Scopes;
 using CompilerLib.Nodes.Types;
-using static CompilerLib.SymbolTable;
+using CompilerLib.SemanticAnalysis;
+using static CompilerLib.SemanticAnalysis.SymbolTable;
 
 namespace CompilerLib.Nodes.Functions;
 

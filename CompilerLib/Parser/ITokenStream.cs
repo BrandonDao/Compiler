@@ -1,6 +1,6 @@
 using CompilerLib.Nodes;
 
-namespace CompilerLib.Lexer;
+namespace CompilerLib.Parser;
 
 public interface ITokenStream
 {

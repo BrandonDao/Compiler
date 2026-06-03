@@ -4,7 +4,7 @@ using System.Text;
 using CompilerLib.Nodes;
 using CompilerLib.Nodes.Functions;
 
-namespace CompilerLib;
+namespace CompilerLib.SemanticAnalysis;
 
 public class SymbolTable
 {

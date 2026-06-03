@@ -1,5 +1,5 @@
 using CompilerLib.Nodes.Types;
-using static CompilerLib.SymbolTable;
+using static CompilerLib.SemanticAnalysis.SymbolTable;
 
 namespace CompilerLib.Nodes.Functions;
 

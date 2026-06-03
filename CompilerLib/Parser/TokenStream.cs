@@ -1,7 +1,6 @@
-using CompilerLib.Lexer;
 using CompilerLib.Nodes;
 
-namespace Compiler.Parser;
+namespace CompilerLib.Parser;
 
 internal class TokenStream(List<LeafNode> tokens) : ITokenStream
 {

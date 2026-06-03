@@ -1,9 +1,9 @@
 ﻿using System.Text;
-using Compiler.Lexer;
-using Compiler.Parser;
-using Compiler.SemanticAnalysis;
-using CompilerLib;
+using CompilerLib.CodeGen;
+using CompilerLib.Lexer;
 using CompilerLib.Nodes;
+using CompilerLib.Parser;
+using CompilerLib.SemanticAnalysis;
 
 namespace Compiler;
 

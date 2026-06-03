@@ -2,8 +2,9 @@ using CompilerLib.Nodes;
 using CompilerLib.Nodes.Functions;
 using CompilerLib.Nodes.Operators;
 using CompilerLib.Nodes.Types;
+using CompilerLib.SemanticAnalysis;
 
-namespace CompilerLib;
+namespace CompilerLib.CodeGen;
 
 public class ILGenerator
 {

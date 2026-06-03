@@ -1,10 +1,12 @@
 using System.Text;
+using CompilerLib.CodeGen;
 using CompilerLib.Nodes.Functions;
 using CompilerLib.Nodes.Operators;
 using CompilerLib.Nodes.Punctuation;
 using CompilerLib.Nodes.Statements;
-using static CompilerLib.ILGenerator;
-using static CompilerLib.SymbolTable;
+using CompilerLib.SemanticAnalysis;
+using static CompilerLib.CodeGen.ILGenerator;
+using static CompilerLib.SemanticAnalysis.SymbolTable;
 
 namespace CompilerLib.Nodes.Scopes;
 
