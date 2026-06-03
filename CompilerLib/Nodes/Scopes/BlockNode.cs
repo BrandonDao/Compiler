@@ -51,7 +51,10 @@ public class FunctionBlockNode(OpenBraceLeaf openBrace, List<SyntaxNode> stateme
 
     public override void GenerateILCode(ILGenerator ilGen, SymbolTable symbolTable, StringBuilder codeBuilder, int indentLevel)
     {
-        if (FunctionInfo == null) throw new InvalidOperationException("Function Info missing! Semantic analysis failed!");
+        if (FunctionInfo == null)
+        {
+            throw new InvalidOperationException("Function Info missing! Semantic analysis failed!");
+        }
 
         ilGen.ResetStackTracking();
         List<(string statement, int indentLevel)> statementInfos = [];
@@ -71,13 +74,16 @@ public class FunctionBlockNode(OpenBraceLeaf openBrace, List<SyntaxNode> stateme
 
         foreach (KeyValuePair<string, SymbolInfo> kvp in FunctionInfo.ChildScopeInfo.SymbolInfoByName)
         {
-            if (FunctionInfo.ParameterInfos.Any(p => p.Name == kvp.Key)) continue;
+            if (FunctionInfo.ParameterInfos.Any(p => p.Name == kvp.Key))
+            {
+                continue;
+            }
 
             localIdToIndex.Add(kvp.Key, locals.Count);
             locals.Add(kvp.Value);
         }
 
-        foreach (var child in Children)
+        foreach (SyntaxNode child in Children)
         {
             switch (child)
             {
@@ -150,13 +156,16 @@ public class NonLocalBlockNode(OpenBraceLeaf openBrace, List<SyntaxNode> stateme
     public override void GenerateILCode(ILGenerator ilGen, SymbolTable symbolTable, StringBuilder codeBuilder, int indentLevel)
     {
         indentLevel++;
-        foreach (var child in innerStatements)
+        foreach (SyntaxNode child in innerStatements)
         {
             if (child is FunctionDefinitionNode functionDef)
             {
                 functionDef.GenerateILCode(ilGen, symbolTable, codeBuilder, indentLevel);
             }
-            else throw new NotImplementedException();
+            else
+            {
+                throw new NotImplementedException();
+            }
         }
     }
 }

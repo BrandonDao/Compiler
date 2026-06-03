@@ -14,7 +14,7 @@ public class WhitespaceLeaf(string value, int startLine, int startChar, int endL
 
     public override string GetPrintable(int indent = 0)
     {
-        var indentString = new string(' ', indent);
+        string indentString = new(' ', indent);
         return $"[{StartLine}.{StartChar} - {EndLine}.{EndChar}]\t{indentString}{(IsLeading ? "Leading" : "Trailing")} Whitespace\n";
     }
 }

@@ -20,7 +20,9 @@ public class VariableNameTypeNode : SyntaxNode
             Type = primitiveLeaf.TypeName;
         }
         else
+        {
             throw new ArgumentException($"Expected an identifier or primitive type, not {type}!");
+        }
 
         UpdateRange();
     }

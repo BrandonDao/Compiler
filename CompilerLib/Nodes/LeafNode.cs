@@ -19,7 +19,10 @@ public abstract class LeafNode(string value, int startLine, int startChar, int e
 
     public override void UpdateRange()
     {
-        if (Children.Count == 0) return;
+        if (Children.Count == 0)
+        {
+            return;
+        }
 
         if (Children[0].StartLine < StartLine
         || Children[0].StartLine == StartLine && Children[0].StartChar < StartChar)
@@ -37,9 +40,9 @@ public abstract class LeafNode(string value, int startLine, int startChar, int e
 
     public override string GetPrintable(int indent = 0)
     {
-        var indentString = new string(' ', indent);
-        var result = $"[{StartLine}.{StartChar} - {EndLine}.{EndChar}]\t{indentString}{GetType().Name} Token: {Value}\n";
-        foreach (var child in Children)
+        string indentString = new(' ', indent);
+        string result = $"[{StartLine}.{StartChar} - {EndLine}.{EndChar}]\t{indentString}{GetType().Name} Token: {Value}\n";
+        foreach (SyntaxNode child in Children)
         {
             result += child.GetPrintable(indent + 4);
         }

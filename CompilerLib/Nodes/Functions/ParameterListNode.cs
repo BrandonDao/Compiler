@@ -11,14 +11,17 @@ public class ParameterListNode : SyntaxNode
         : base([openParen, .. parameters, closeParen])
     {
         Parameters = new(capacity: parameters.Count);
-        foreach (var param in parameters)
+        foreach (SyntaxNode param in parameters)
         {
             if (param is VariableNameTypeNode variableNameType)
             {
                 Parameters.Add(variableNameType);
             }
             else if (param is CommaLeaf _) { }
-            else throw new ArgumentException("Parameters must only contains VariableNameTypeNodes or CommaLeafs!");
+            else
+            {
+                throw new ArgumentException("Parameters must only contains VariableNameTypeNodes or CommaLeafs!");
+            }
         }
         UpdateRange();
     }

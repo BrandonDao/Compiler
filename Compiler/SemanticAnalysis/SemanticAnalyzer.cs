@@ -122,7 +122,7 @@ public class SemanticAnalyzer
 
             void HandleScopeContainer(IContainsScopeNode scopeContainer)
             {
-                var isScopeContainerLocal = isLocal;
+                bool isScopeContainerLocal = isLocal;
                 if (scopeContainer is FunctionDefinitionNode funcDefNode)
                 {
                     isScopeContainerLocal = true;

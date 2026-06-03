@@ -53,11 +53,14 @@ public class FunctionDefinitionNode :
         }
         else
         {
-            if (FunctionInfo == null) throw new InvalidOperationException("FunctionInfo is not set for IL code generation! SymbolTable may not have been built correctly.");
+            if (FunctionInfo == null)
+            {
+                throw new InvalidOperationException("FunctionInfo is not set for IL code generation! SymbolTable may not have been built correctly.");
+            }
 
             codeBuilder.AppendIndentedLine($".method public hidebysig static", indentLevel);
             indentLevel++;
-            if (ILGenerator.PrimitiveNameMap.TryGetValue(ReturnTypeName, out var retPrimitiveTypeName))
+            if (ILGenerator.PrimitiveNameMap.TryGetValue(ReturnTypeName, out string? retPrimitiveTypeName))
             {
                 codeBuilder.AppendIndented(retPrimitiveTypeName, indentLevel);
             }
@@ -73,7 +76,7 @@ public class FunctionDefinitionNode :
                 for (int i = 0; true; i++)
                 {
                     SymbolInfo param = FunctionInfo.ParameterInfos[i];
-                    if (ILGenerator.PrimitiveNameMap.TryGetValue(param.Type, out var paramPrimitiveTypeName))
+                    if (ILGenerator.PrimitiveNameMap.TryGetValue(param.Type, out string? paramPrimitiveTypeName))
                     {
                         codeBuilder.AppendIndented($"{paramPrimitiveTypeName} {param.Name}", indentLevel);
                     }
@@ -85,7 +88,10 @@ public class FunctionDefinitionNode :
                     {
                         codeBuilder.AppendLine(", ");
                     }
-                    else break;
+                    else
+                    {
+                        break;
+                    }
                 }
             }
             codeBuilder.AppendLine();

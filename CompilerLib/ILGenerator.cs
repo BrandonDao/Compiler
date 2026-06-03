@@ -186,7 +186,10 @@ public class ILGenerator
             {
                 statementInfos.Add((ilGen.Emit(OpCode.ldc_i4, boolLiteral.Value == LanguageNames.Literals.True ? 1 : 0), indentLevel));
             }
-            else throw new NotImplementedException();
+            else
+            {
+                throw new NotImplementedException();
+            }
         }
         else if (operand is FunctionCallExpressionNode funcCallExpr)
         {
@@ -207,7 +210,7 @@ public class ILGenerator
             }
 
             List<string> parameterTypes = [];
-            foreach (var param in funcCallExpr.FunctionInfo.ParameterInfos)
+            foreach (SymbolTable.SymbolInfo param in funcCallExpr.FunctionInfo.ParameterInfos)
             {
                 if (!PrimitiveNameMap.TryGetValue(param.Type, out string? typeName))
                 {
@@ -221,12 +224,17 @@ public class ILGenerator
             }
             statementInfos.Add((Emit(OpCode.call, funcCallExpr.FunctionInfo.Name, funcCallExpr.FunctionInfo.SignatureInfo.Type, parameterTypes), indentLevel));
         }
-        else throw new NotImplementedException($"Unsupported operand type: {operand.GetType().Name}");
+        else
+        {
+            throw new NotImplementedException($"Unsupported operand type: {operand.GetType().Name}");
+        }
     }
     public static void LoadIdentifier(ILGenerator ilGen, List<(string, int)> statementInfos, int indentLevel, Dictionary<string, int> localIdToIndex, IdentifierLeaf identifier)
     {
         if (!localIdToIndex.TryGetValue(identifier.Value, out int index))
+        {
             throw new NotImplementedException($"Non-local identifiers unsupported!");
+        }
 
         statementInfos.Add((ilGen.Emit(OpCode.ldloc, index), indentLevel));
     }

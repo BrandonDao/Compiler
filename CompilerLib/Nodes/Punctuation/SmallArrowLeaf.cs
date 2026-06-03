@@ -11,7 +11,7 @@ public class ImplicitSmallArrowLeaf(int startLine, int startChar)
 {
     public override string GetPrintable(int indent)
     {
-        var indentString = new string(' ', indent);
+        string indentString = new(' ', indent);
         return $"[{StartLine}.{StartChar}]\t\t{indentString}{GetType().Name}\n";
     }
 }

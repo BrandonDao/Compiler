@@ -13,7 +13,9 @@ public class QualifiedNameNode : SyntaxNode
         trimmedChildren = new List<SyntaxNode>(capacity: children.Count);
 
         if (children.Count == 0 || children[0] is not IdentifierLeaf startIdLeaf)
+        {
             throw new ArgumentException("QualifiedNameNode must start with an IdentifierLeaf!");
+        }
 
         StringBuilder nameBuilder = new(startIdLeaf.Value);
         for (int i = 1; i < children.Count; i++)
@@ -41,10 +43,10 @@ public class QualifiedNameNode : SyntaxNode
 
     public override string GetPrintable(int indent = 0)
     {
-        var indentString = new string(' ', indent);
+        string indentString = new(' ', indent);
         StringBuilder builder = new();
         builder.Append($"[{StartLine}.{StartChar} - {EndLine}.{EndChar}]\t{indentString}{GetType().Name} Name: {Name}\n");
-        foreach (var child in Children)
+        foreach (SyntaxNode child in Children)
         {
             builder.Append(child.GetPrintable(indent + 4));
         }

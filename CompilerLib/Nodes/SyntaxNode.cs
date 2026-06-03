@@ -34,7 +34,10 @@ public abstract class SyntaxNode : IHasChildren
 
     public virtual void UpdateRange()
     {
-        if (Children.Count == 0) return;
+        if (Children.Count == 0)
+        {
+            return;
+        }
 
         StartLine = Children[0].StartLine;
         StartChar = Children[0].StartChar;
@@ -44,9 +47,9 @@ public abstract class SyntaxNode : IHasChildren
 
     public virtual string GetPrintable(int indent = 0)
     {
-        var indentString = new string(' ', indent);
-        var result = $"[{StartLine}.{StartChar} - {EndLine}.{EndChar}]\t{indentString}{GetType().Name}\n";
-        foreach (var child in Children)
+        string indentString = new(' ', indent);
+        string result = $"[{StartLine}.{StartChar} - {EndLine}.{EndChar}]\t{indentString}{GetType().Name}\n";
+        foreach (SyntaxNode child in Children)
         {
             result += child.GetPrintable(indent + 4);
         }
@@ -54,7 +57,7 @@ public abstract class SyntaxNode : IHasChildren
     }
     public virtual void FlattenBackToInput(StringBuilder builder)
     {
-        foreach (var child in Children)
+        foreach (SyntaxNode child in Children)
         {
             child.FlattenBackToInput(builder);
         }
