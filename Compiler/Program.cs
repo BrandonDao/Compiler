@@ -36,7 +36,8 @@ internal class Program
 
         Console.WriteLine("\nCONCRETE SYNTAX TREE");
         RecursiveDescentParser parser = RecursiveDescentParser.Instance;
-        ParserEntrypointNode cstRoot = parser.ParseTokensToCST(tokens) ?? throw new ArgumentException("Failed to parse tokens into CST!");
+        TokenStream tokenStream = new(tokens);
+        ParserEntrypointNode cstRoot = parser.ParseTokensToCST(tokenStream);
         Console.WriteLine(cstRoot.GetPrintable());
 
         Console.WriteLine("CST -> ORIGINAL INPUT");
@@ -45,7 +46,7 @@ internal class Program
         Console.WriteLine(builder.ToString());
 
         Console.WriteLine("\nCST -> AST");
-        ParserEntrypointNode astRoot = parser.ParseCSTToAST(cstRoot) ?? throw new ArgumentException("Failed to convert CST to AST!");
+        ParserEntrypointNode astRoot = parser.ParseCSTToAST(cstRoot);
         Console.WriteLine(astRoot.GetPrintable());
 
         SemanticAnalyzer analyzer = new();

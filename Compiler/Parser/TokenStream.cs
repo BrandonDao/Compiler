@@ -2,29 +2,18 @@ using CompilerLib.Nodes;
 
 namespace Compiler.Parser;
 
-internal class TokenStream(List<LeafNode> tokens)
+internal class TokenStream(List<LeafNode> tokens) : ITokenStream
 {
     private readonly List<LeafNode> tokens = tokens;
     private int position = 0;
 
     public bool IsAtEnd => position >= tokens.Count;
-    public LeafNode CurrentToken
-    {
-        get
-        {
-            if (IsAtEnd)
-            {
-                throw new ArgumentException("Unexpected end of input!");
-            }
-            return tokens[position];
-        }
-    }
+    public LeafNode Peek() => IsAtEnd
+        ? throw new InvalidOperationException("Unexpected end of input!")
+        : tokens[position];
 
     public void Advance() => position++;
 
-    // This signature isn't quite standard/idiomatic C#, but it allows type inference without using `var`
-    // - `var` usage will remain an error to prevent agentic AI abuse
-    // - `T token = Consume<T>();` may be more idiomatic but requires typing `T` twice which can become pretty verbose.
     public void Consume<T>(out T token) where T : LeafNode
         => token = Consume<T>();
     public void Consume<T>(out T token, string messageOnUnexpectedToken) where T : LeafNode
