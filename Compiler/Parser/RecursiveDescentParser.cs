@@ -17,11 +17,13 @@ public class RecursiveDescentParser : IParser
 
     private RecursiveDescentParser() { }
 
-    public ParserEntrypointNode ParseTokensToCST(ITokenStream tokenStream)
+    public ParserEntrypointNode ParseTokensToCST(List<LeafNode> tokens)
     {
+        TokenStream tokenStream = new(tokens);
+
         tokenStream = tokenStream.IsAtEnd
             ? throw new ArgumentException("Cannot parse an empty stream of tokens!")
-            : (ITokenStream)HangWhitespace(tokenStream);
+            : HangWhitespace(tokenStream);
 
         return new ParserEntrypointNode(ParseNamespaceDefinition(tokenStream));
     }

@@ -37,8 +37,7 @@ internal class Program
 
         Console.WriteLine("\nCONCRETE SYNTAX TREE");
         RecursiveDescentParser parser = RecursiveDescentParser.Instance;
-        TokenStream tokenStream = new(tokens);
-        ParserEntrypointNode cstRoot = parser.ParseTokensToCST(tokenStream);
+        ParserEntrypointNode cstRoot = parser.ParseTokensToCST(tokens);
         Console.WriteLine(cstRoot.GetPrintable());
 
         Console.WriteLine("CST -> ORIGINAL INPUT");
