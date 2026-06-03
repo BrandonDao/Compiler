@@ -1,6 +1,7 @@
+using CompilerLib.Lexer;
 using CompilerLib.Nodes;
 
-namespace Compiler.Parser;
+namespace CompilerLib.Parser;
 
 public interface IParser
 {

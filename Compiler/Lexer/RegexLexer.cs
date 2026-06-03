@@ -9,8 +9,9 @@ using CompilerLib.Nodes.Punctuation;
 using CompilerLib.Nodes.Statements.Controls;
 using CompilerLib.Nodes.Scopes;
 using CompilerLib.Nodes.Types;
+using Compiler.Parser;
 
-namespace Compiler;
+namespace Compiler.Lexer;
 
 public class RegexLexer : ILexer
 {
