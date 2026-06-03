@@ -1,5 +1,4 @@
 using System.Text;
-using CompilerLib;
 using CompilerLib.Nodes;
 using CompilerLib.Nodes.Functions;
 using CompilerLib.Nodes.Operators;
@@ -11,7 +10,7 @@ using static CompilerLib.SemanticAnalysis.SymbolTable;
 
 namespace CompilerLib.SemanticAnalysis;
 
-public class SemanticAnalyzer
+public class SemanticAnalyzer : ISemanticAnalyzer
 {
     public SymbolTable SymbolTable { get; } = new();
 
