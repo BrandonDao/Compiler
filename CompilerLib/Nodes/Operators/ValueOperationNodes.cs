@@ -32,10 +32,6 @@ public abstract class BinaryOperationNode(List<SyntaxNode> children, string oper
     public SyntaxNode RightOperand => Children[1];
     public string Operator { get; } = operatorToDisplay;
 }
-public abstract class LowPrecedenceOperationNode(List<SyntaxNode> children, string operatorToDisplay)
-    : BinaryOperationNode(children, operatorToDisplay);
-public abstract class HighPrecedenceOperationNode(List<SyntaxNode> children, string operatorToDisplay)
-    : BinaryOperationNode(children, operatorToDisplay);
 
 public class ParenthesizedExpression(OpenParenthesisLeaf open, SyntaxNode expr, CloseParenthesisLeaf close)
     : SyntaxNode([open, expr, close])
@@ -43,7 +39,7 @@ public class ParenthesizedExpression(OpenParenthesisLeaf open, SyntaxNode expr, 
     public override SyntaxNode ToAST() => Children[1].ToAST(); // Return the expression inside the parentheses
 }
 
-public class MultiplyOperationNode(List<SyntaxNode> children) : HighPrecedenceOperationNode(children, "*")
+public class MultiplyOperationNode(List<SyntaxNode> children) : BinaryOperationNode(children, "*")
 {
     public override void GenerateCode(ILGenerator ilGen, SymbolTable symbolTable, uint scopeID, List<(string, int)> statementInfos, int indentLevel, Dictionary<string, int> localIdToIndex)
     {
@@ -52,7 +48,7 @@ public class MultiplyOperationNode(List<SyntaxNode> children) : HighPrecedenceOp
         statementInfos.Add((ilGen.Emit(ILGenerator.OpCode.mul), indentLevel));
     }
 }
-public class DivideOperationNode(List<SyntaxNode> children) : HighPrecedenceOperationNode(children, "/")
+public class DivideOperationNode(List<SyntaxNode> children) : BinaryOperationNode(children, "/")
 {
     public override void GenerateCode(ILGenerator ilGen, SymbolTable symbolTable, uint scopeID, List<(string, int)> statementInfos, int indentLevel, Dictionary<string, int> localIdToIndex)
     {
@@ -61,7 +57,7 @@ public class DivideOperationNode(List<SyntaxNode> children) : HighPrecedenceOper
         statementInfos.Add((ilGen.Emit(ILGenerator.OpCode.div), indentLevel));
     }
 }
-public class ModOperationNode(List<SyntaxNode> children) : HighPrecedenceOperationNode(children, "%")
+public class ModOperationNode(List<SyntaxNode> children) : BinaryOperationNode(children, "%")
 {
     public override void GenerateCode(ILGenerator ilGen, SymbolTable symbolTable, uint scopeID, List<(string, int)> statementInfos, int indentLevel, Dictionary<string, int> localIdToIndex)
     {
@@ -71,7 +67,7 @@ public class ModOperationNode(List<SyntaxNode> children) : HighPrecedenceOperati
     }
 }
 
-public class AddOperationNode(List<SyntaxNode> children) : LowPrecedenceOperationNode(children, "+")
+public class AddOperationNode(List<SyntaxNode> children) : BinaryOperationNode(children, "+")
 {
     public override void GenerateCode(ILGenerator ilGen, SymbolTable symbolTable, uint scopeID, List<(string, int)> statementInfos, int indentLevel, Dictionary<string, int> localIdToIndex)
     {
@@ -80,7 +76,7 @@ public class AddOperationNode(List<SyntaxNode> children) : LowPrecedenceOperatio
         statementInfos.Add((ilGen.Emit(ILGenerator.OpCode.add), indentLevel));
     }
 }
-public class SubtractOperationNode(List<SyntaxNode> children) : LowPrecedenceOperationNode(children, "-")
+public class SubtractOperationNode(List<SyntaxNode> children) : BinaryOperationNode(children, "-")
 {
     public override void GenerateCode(ILGenerator ilGen, SymbolTable symbolTable, uint scopeID, List<(string, int)> statementInfos, int indentLevel, Dictionary<string, int> localIdToIndex)
     {
@@ -111,7 +107,7 @@ public class NotOperationNode(List<SyntaxNode> children) : UnaryOperationNode(ch
         return this;
     }
 }
-public class OrOperationNode(List<SyntaxNode> children) : LowPrecedenceOperationNode(children, "|")
+public class OrOperationNode(List<SyntaxNode> children) : BinaryOperationNode(children, "|")
 {
     public override void GenerateCode(ILGenerator ilGen, SymbolTable symbolTable, uint scopeID, List<(string, int)> statementInfos, int indentLevel, Dictionary<string, int> localIdToIndex)
     {
@@ -121,7 +117,7 @@ public class OrOperationNode(List<SyntaxNode> children) : LowPrecedenceOperation
     }
 }
 
-public class AndOperationNode(List<SyntaxNode> children) : LowPrecedenceOperationNode(children, "&")
+public class AndOperationNode(List<SyntaxNode> children) : BinaryOperationNode(children, "&")
 {
     public override void GenerateCode(ILGenerator ilGen, SymbolTable symbolTable, uint scopeID, List<(string, int)> statementInfos, int indentLevel, Dictionary<string, int> localIdToIndex)
     {
@@ -131,7 +127,7 @@ public class AndOperationNode(List<SyntaxNode> children) : LowPrecedenceOperatio
     }
 }
 
-public class EqualityOperationNode(List<SyntaxNode> children) : LowPrecedenceOperationNode(children, "==")
+public class EqualityOperationNode(List<SyntaxNode> children) : BinaryOperationNode(children, "==")
 {
     public override void GenerateCode(ILGenerator ilGen, SymbolTable symbolTable, uint scopeID, List<(string, int)> statementInfos, int indentLevel, Dictionary<string, int> localIdToIndex)
     {

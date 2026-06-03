@@ -451,41 +451,32 @@ public class SemanticAnalyzer
                                 string lhsType = ResolveType(symbolTable, ref failFlag, messageSB, binaryOp.LeftOperand, currentScopeID);
                                 string rhsType = ResolveType(symbolTable, ref failFlag, messageSB, binaryOp.RightOperand, currentScopeID);
 
-                                switch (node)
+                                switch (binaryOp)
                                 {
-                                    case HighPrecedenceOperationNode highOp:
+                                    case AddOperationNode
+                                        or SubtractOperationNode
+                                        or MultiplyOperationNode
+                                        or DivideOperationNode
+                                        or ModOperationNode:
                                         if (lhsType is not (LanguageNames.Primitives.Int8 or LanguageNames.Primitives.Int16 or LanguageNames.Primitives.Int32 or LanguageNames.Primitives.Int64)
                                         || rhsType is not (LanguageNames.Primitives.Int8 or LanguageNames.Primitives.Int16 or LanguageNames.Primitives.Int32 or LanguageNames.Primitives.Int64))
                                         {
                                             failFlag = true;
-                                            LogMessage(messageSB, highOp, $"Operator '{highOp.Operator}' cannot be applied to operands of type {lhsType} and {rhsType}");
+                                            LogMessage(messageSB, binaryOp, $"Operator '{binaryOp.Operator}' cannot be applied to operands of type {lhsType} and {rhsType}");
                                         }
                                         return lhsType;
 
-                                    case LowPrecedenceOperationNode lowOp:
-                                        switch (lowOp)
+                                    case OrOperationNode
+                                        or AndOperationNode:
+                                        if (lhsType != LanguageNames.Primitives.Bool || rhsType != LanguageNames.Primitives.Bool)
                                         {
-                                            case AddOperationNode or SubtractOperationNode:
-                                                if (lhsType is not (LanguageNames.Primitives.Int8 or LanguageNames.Primitives.Int16 or LanguageNames.Primitives.Int32 or LanguageNames.Primitives.Int64)
-                                                || rhsType is not (LanguageNames.Primitives.Int8 or LanguageNames.Primitives.Int16 or LanguageNames.Primitives.Int32 or LanguageNames.Primitives.Int64))
-                                                {
-                                                    failFlag = true;
-                                                    LogMessage(messageSB, lowOp, $"Operator '{lowOp.Operator}' cannot be applied to operands of type {lhsType} and {rhsType}");
-                                                }
-                                                return lhsType;
-
-                                            case OrOperationNode or AndOperationNode:
-                                                if (lhsType != LanguageNames.Primitives.Bool || rhsType != LanguageNames.Primitives.Bool)
-                                                {
-                                                    failFlag = true;
-                                                    LogMessage(messageSB, lowOp, $"Operator '{lowOp.Operator}' cannot be applied to operands of type {lhsType} and {rhsType}");
-                                                }
-                                                return lhsType;
-
-                                            case EqualityOperationNode:
-                                                return LanguageNames.Primitives.Bool;
+                                            failFlag = true;
+                                            LogMessage(messageSB, binaryOp, $"Operator '{binaryOp}' cannot be applied to operands of type {lhsType} and {rhsType}");
                                         }
-                                        throw new NotImplementedException("Low precedence binary operation not implemented: " + node.GetType().Name);
+                                        return lhsType;
+
+                                    case EqualityOperationNode:
+                                        return LanguageNames.Primitives.Bool;
                                 }
                                 throw new NotImplementedException("Binary operation not implemented: " + node.GetType().Name);
                             }
